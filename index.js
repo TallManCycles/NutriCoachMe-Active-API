@@ -4,6 +4,13 @@ import sgMail from "@sendgrid/mail";
 import OpenAI from "openai";
 import cors from "cors";
 import process from "process";
+import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 let openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -24,6 +31,25 @@ const port = process.env.PORT || 3000;
 const apiKey = process.env.API_KEY;
 sgMail.setApiKey(apiKey);
 
+// Authentication middleware
+const authenticate = async (req, res, next) => {
+
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error(error);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+};
+
 app.get("/api/", (req, res) => {
   res.send("Server is running!");
 });
@@ -32,7 +58,7 @@ app.get("/api/health-check", (req, res) => {
   return res.status(200).json({ message: "Server is healthy!" });
 });
 
-app.post("/api/send-email", async (req, res) => {
+app.post("/api/send-email", authenticate, async (req, res) => {
   try {
     const { formdata, template, subject } = req.body;
 
@@ -52,12 +78,12 @@ app.post("/api/send-email", async (req, res) => {
       res.status(500).json({ error: "Failed" });
     }
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ error: "An unknown error has occured." });
   }
 });
 
-app.post("/api/food-assist", async (req, res) => {
+app.post("/api/food-assist", authenticate, async (req, res) => {
   try {
     const { calories, protein, carbs, fats } = req.body;
 
@@ -100,7 +126,7 @@ app.post("/api/food-assist", async (req, res) => {
   }
 });
 
-app.post("/api/food-input", async (req, res) => {
+app.post("/api/food-input", authenticate, async (req, res) => {
   try {
     const { prompt } = req.body;
 
@@ -158,7 +184,7 @@ app.post("/api/food-input", async (req, res) => {
   }
 });
 
-app.post("/api/create-self-checkin", async (req, res) => {
+app.post("/api/create-self-checkin", authenticate, async (req, res) => {
   try {
     const { formdata, template, subject } = req.body;
 
