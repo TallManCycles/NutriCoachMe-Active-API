@@ -248,4 +248,79 @@ app.post("/api/create-self-checkin", authenticate, async (req, res) => {
   }
 });
 
+app.post("/api/create-self-checkin-assistant", async (req, res) => {
+  try {
+    const { formdata, template, subject } = req.body;
+
+    if (!openai) {
+      openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+
+    const instructions =
+      `Reply in detail as a nutritionist, and give some actionable tips for the upcoming week and sign off as Aaron Day. Create the response in html format for an email.`;
+
+      let content = '';
+
+      const thread = await openai.beta.threads.create();
+
+      const message = await openai.beta.threads.messages.create(
+        thread.id,
+        { role: "user", content: template },
+      );
+
+      let run = await openai.beta.threads.runs.createAndPoll(
+        thread.id,
+        { 
+          assistant_id: 'asst_IfLY8vj37klHpNuEeT3rkURN',
+          instructions: instructions,
+        }
+      );
+
+      if (run.status === 'completed') {
+        const messages = await openai.beta.threads.messages.list(
+          run.thread_id
+        );
+      
+        if (messages.data.length > 0) {
+          content = messages.data.reverse().map(msg => `${msg.role} > ${msg.content[0].text.value}`).join('\n');
+
+        if (!content) {
+          res.status(400).json({ error: true });
+        }
+
+        console.log('from assistant', content);
+
+        res.status(200).json({ message: content });
+
+          const htmlResponse = "<html><body><p>" + content +
+            "</p></body></html>";
+
+          const msg = {
+            to: "fatforweightloss+client@gmail.com", // set to my email address for now to ensure the data is good: formdata.email,
+            from: "coach@fatforweightloss.com.au",
+            subject: subject,
+            html: htmlResponse,
+            replyTo: formdata.email,
+          };
+
+          const emailResponse = await sgMail.send(msg);
+
+          if (emailResponse[0].statusCode === 202) {
+            res.status(200).json({ message: "Success" });
+          } else {
+            res.status(500).json({ error: "Failed" });
+          }
+
+      } else {
+        res.status(400).json({ error: true, message: 'No response' });
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: true, message: error.toString() });
+  }
+});
+
 app.listen(port);
