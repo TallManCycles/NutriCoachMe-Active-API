@@ -6,6 +6,7 @@ import cors from "cors";
 import process from "process";
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import Stripe from 'stripe';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -16,6 +17,16 @@ let openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Initialize Stripe client
+let stripeKey = ''
+if (process.env.NODE_ENV === 'development') {
+  stripeKey = process.env.STRIPE_TEST_SECRET_KEY;
+    } else {
+  stripeKey = process.env.STRIPE_LIVE_SECRET_KEY;
+}
+
+const stripe = new Stripe(stripeKey);
+
 const app = express();
 app.use(
   cors({
@@ -24,6 +35,81 @@ app.use(
     credentials: true,
   }),
 );
+
+app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (request, response) => {
+
+  const sig = request.headers['stripe-signature'];
+
+  const endpointSecret = 'whsec_xqV8kA1LmJY2mexn5TMgkq4OKtJC2Vr7';
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+  } catch (err) {
+    console.error(err);
+    response.status(400).send(`Webhook Error: ${err.message}`);
+    return;
+  }
+  
+  let result = null;
+
+  // Handle the event
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.deleted':
+    case 'customer.subscription.paused':
+    case 'customer.subscription.resumed':
+    case 'customer.subscription.updated':
+    case 'subscription_schedule.aborted':
+    case 'subscription_schedule.canceled':
+    case 'subscription_schedule.completed':
+    case 'subscription_schedule.created':
+    case 'subscription_schedule.expiring':
+    case 'subscription_schedule.released':
+    case 'subscription_schedule.updated':
+      result = await handleWebhookRequest(event.id, event.type, event.data.object);
+      break;
+    default:
+      response.status(400).end();
+      console.error(`Unhandled event type ${event.type}`);
+  }
+  
+  if (!result) {
+    response.status(500).end();
+  }
+
+  response.send();
+});
+
+async function handleWebhookRequest(id, eventType, data) {  
+  
+  console.log(`Received event ${eventType} with id ${id} with data: ${data}`);
+  
+  try {
+    const customerId = data ? data.customer : null;
+
+    // insert the data into the webhook_data table in supabase
+    const { error } = await supabase
+        .from('webhook_data')
+        .insert({
+          webhook_id: id,
+          event_type: eventType,
+          customer_id: customerId,
+          data: data })
+
+    if (error) {
+      console.error(error);
+      return false;
+    }
+  } catch (error) {
+    console.error(error);
+    return false;
+  } 
+  
+  return true;
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
