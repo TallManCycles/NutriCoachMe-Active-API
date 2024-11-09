@@ -93,38 +93,40 @@ async function handleWebhookRequest(id, eventType, data) {
         
         // insert the active until date into the users table in supabase        
         // get the user id from the customer id
-
-        const { data: user, error: userError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('stripe_customer_id', customerId)
-            .single();        
         
-        if (userError) {
-            logError(userError);
-            return false;
-        }
-        
-        const timestamp = data.current_period_end;
-        if (timestamp) {
-            const activeUntil = new Date(timestamp * 1000);
+        if (customerId) {
 
-            const { error: subscriptionError } = await supabase
+            const {data: user, error: userError} = await supabase
                 .from('users')
-                .update({
-                    active_until: activeUntil.toISOString()
-                })
-                .eq('id', user.id);
+                .select('id')
+                .eq('stripe_customer_id', customerId)
+                .single();
 
-            if (subscriptionError) {
-                logError(subscriptionError);
+            if (userError) {
+                logError(userError);
                 return false;
             }
-        } else {
-            logError('No current_period_end in subscription data');
-            return false;
-        }
-           
+
+            const timestamp = data.current_period_end;
+            if (timestamp) {
+                const activeUntil = new Date(timestamp * 1000);
+
+                const {error: subscriptionError} = await supabase
+                    .from('users')
+                    .update({
+                        active_until: activeUntil.toISOString()
+                    })
+                    .eq('id', user.id);
+
+                if (subscriptionError) {
+                    logError(subscriptionError);
+                    return false;
+                }
+            } else {
+                logError('No current_period_end in subscription data');
+                return false;
+            }
+        }          
         
     } catch (error) {
         logError(error);
