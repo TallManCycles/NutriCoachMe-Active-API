@@ -13,17 +13,20 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize Stripe client
 let stripeKey = '';
+let stripeWebhookSecret = '';
 if (process.env.NODE_ENV === 'development') {
     stripeKey = process.env.STRIPE_TEST_SECRET_KEY;
+    stripeWebhookSecret = process.env.STRIPE_TEST_WEBHOOK_SECRET;
 } else {
     stripeKey = process.env.STRIPE_LIVE_SECRET_KEY;
+    stripeWebhookSecret = process.env.STRIPE_LIVE_WEBHOOK_SECRET;
 }
 
 const stripe = new Stripe(stripeKey);
 
 router.post('/', express.raw({ type: 'application/json' }), async (request, response) => {
     const sig = request.headers['stripe-signature'];
-    const endpointSecret = 'whsec_xqV8kA1LmJY2mexn5TMgkq4OKtJC2Vr7';
+    const endpointSecret = stripeWebhookSecret;
 
     let event;
 
