@@ -4,6 +4,21 @@ import sgMail from "@sendgrid/mail";
 import express from "express";
 import OpenAI from "openai";
 import {logError, logInfo} from "../error/log.js";
+import multer from "multer";
+import path from "path";
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const baseName = path.basename(file.originalname, ext);
+        cb(null, `${baseName}-${Date.now()}${ext}`);
+    }
+});
+
+const upload = multer({ storage: storage });
+
 
 let openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -112,6 +127,89 @@ router.post("/api/food-input", authenticate, async (req, res) => {
     } catch (error) {
         logError(error);
         res.status(500).json({ error: true });
+    }
+});
+
+router.post("/api/food-photo", upload.single('file'), async (req, res) => {
+    try {
+        const { description } = req.body;
+        const file = req.file;
+
+        if (!openai) {
+            openai = new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY,
+            });
+        }
+
+        const sampleObjectJson = [
+            {
+                food: "sample food",
+                weight: "100",
+                type: "g",
+                calories: 200,
+                protein: 50,
+                carbs: 20,
+                fats: 10,
+            },
+        ];
+
+        const fileUrl = `https://nutriapi.supadatabase.com.au/uploads/${file.filename}`;
+
+        const sampleObjectString = JSON.stringify(sampleObjectJson);
+
+        const message = {
+            role: "system",
+            content: [
+                { type: "text", text: `Reply as a object in this exact format: ${sampleObjectString} - give me the nutrition for the food present in this image: ${description}. Weight in grams` },
+                { type: "image_url", image_url: {
+                    url: fileUrl,
+                    detail: "low"
+                    }
+                },
+            ]
+        }
+        
+        console.log(JSON.stringify(message));
+
+        try {
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { 
+                        role: "user", 
+                        content: [
+                            { type: "text", text: `Reply as a object in this exact format: ${sampleObjectString} - give me the nutrition for the food present in this image: ${description}. Weight in grams` },
+                            { 
+                                type: "image_url", 
+                                image_url: {
+                                    "url": "https://www.foodiesfeed.com/wp-content/uploads/2023/06/burger-with-melted-cheese.jpg",
+                                    "detail": "low"
+                                }
+                            }
+                        ] 
+                    }
+                ],
+                max_tokens: 500
+            });
+
+            if (
+                response &&
+                response.choices.length > 0 &&
+                response.choices[0].message &&
+                response.choices[0].message.content
+            ) {
+                console.log(response.choices[0].message.content);
+                res.status(200).json({ analysis: response.choices[0].message.content });
+            } else {
+                res.status(400).json({ error: "Sorry, I can't help with that." });
+            }
+        } catch (error) {
+            logError(error);
+            res.status(500).json({ error: "An unknown error has occurred." });
+        }
+    } catch (error) {
+        logError(error);
+        res.status(500).json({ error: "An unknown error has occurred." });
     }
 });
 
