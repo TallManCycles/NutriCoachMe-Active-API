@@ -2,6 +2,9 @@ import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import process from "process";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
 
 import stripeWebhookController from './controllers/stripewebhookcontroller.js';
 import emailController from "./controllers/emailcontroller.js";
@@ -25,6 +28,20 @@ app.use(
     credentials: true,
   }),
 );
+
+// Define __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+try {
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+    }
+} catch (error) {
+    console.log('Error creating uploads directory', error);
+}
 
 // webhooks need to be setup before the body parser
 app.use('/webhook/stripe', stripeWebhookController);
