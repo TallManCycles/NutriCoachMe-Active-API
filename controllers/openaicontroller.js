@@ -130,7 +130,7 @@ router.post("/api/food-input", authenticate, async (req, res) => {
     }
 });
 
-router.post("/api/food-nutrition", upload.single('file'), async (req, res) => {
+router.post("/api/food-nutrition", authenticate, upload.single('file'), async (req, res) => {
     try {
         const file = req.file;
 
@@ -156,8 +156,7 @@ router.post("/api/food-nutrition", upload.single('file'), async (req, res) => {
         
         const serverUrl = req.protocol + '://' + req.get('host');
         
-        // const fileUrl = serverUrl + `/uploads/${file.filename}`;
-        const fileUrl = 'http://nutriapi.supadatabase.com.au/uploads/17316981878833538460179161839680-1731698249271.jpg';
+        const fileUrl = serverUrl + `/uploads/${file.filename}`;
         
         console.log(fileUrl);
 
