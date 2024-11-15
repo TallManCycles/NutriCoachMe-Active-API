@@ -130,7 +130,7 @@ router.post("/api/food-input", authenticate, async (req, res) => {
     }
 });
 
-router.post("/api/food-nutrition", authenticate, upload.single('file'), async (req, res) => {
+router.post("/api/food-nutrition", upload.single('file'), async (req, res) => {
     try {
         const file = req.file;
 
