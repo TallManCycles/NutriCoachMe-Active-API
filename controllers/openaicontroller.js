@@ -130,9 +130,8 @@ router.post("/api/food-input", authenticate, async (req, res) => {
     }
 });
 
-router.post("/api/food-photo", upload.single('file'), async (req, res) => {
+router.post("/api/food-nutrition", upload.single('file'), async (req, res) => {
     try {
-        const { description } = req.body;
         const file = req.file;
 
         if (!openai) {
@@ -152,24 +151,16 @@ router.post("/api/food-photo", upload.single('file'), async (req, res) => {
                 fats: 10,
             },
         ];
-
-        const fileUrl = `https://nutriapi.supadatabase.com.au/uploads/${file.filename}`;
+        
+        // how to get the hostname of the server
+        
+        const serverUrl = req.protocol + '://' + req.get('host');
+        
+        const fileUrl = serverUrl + `/uploads/${file.filename}`;
+        
+        console.log(fileUrl);
 
         const sampleObjectString = JSON.stringify(sampleObjectJson);
-
-        const message = {
-            role: "system",
-            content: [
-                { type: "text", text: `Reply as a object in this exact format: ${sampleObjectString} - give me the nutrition for the food present in this image: ${description}. Weight in grams` },
-                { type: "image_url", image_url: {
-                    url: fileUrl,
-                    detail: "low"
-                    }
-                },
-            ]
-        }
-        
-        console.log(JSON.stringify(message));
 
         try {
             const response = await openai.chat.completions.create({
@@ -178,11 +169,11 @@ router.post("/api/food-photo", upload.single('file'), async (req, res) => {
                     { 
                         role: "user", 
                         content: [
-                            { type: "text", text: `Reply as a object in this exact format: ${sampleObjectString} - give me the nutrition for the food present in this image: ${description}. Weight in grams` },
+                            { type: "text", text: `Reply as a object in this exact format: ${sampleObjectString} - Tell me the nutritional information from this nutritional label per serving.` },
                             { 
                                 type: "image_url", 
                                 image_url: {
-                                    "url": "https://www.foodiesfeed.com/wp-content/uploads/2023/06/burger-with-melted-cheese.jpg",
+                                    "url": fileUrl,
                                     "detail": "low"
                                 }
                             }
