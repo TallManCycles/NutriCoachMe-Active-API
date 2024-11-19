@@ -56,4 +56,28 @@ router.get('/api/stripe/customer',async (req, response) => {
     }
 });
 
+router.get('/api/stripe/portal', authenticate, async (req, response) => {
+    const customerId = req.query.customer;
+
+    if (!customerId) {
+        response.status(400).end();
+        return;
+    }
+
+    try {
+        const session = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: 'https://nutricoachme.com',
+            configuration: {
+                features: ['subscription_update'],
+            },
+        });
+
+        response.status(200).json({url: session.url});
+    } catch (error) {
+        logError(error);
+        response.status(404).end();
+    }
+});
+
 export default router;
