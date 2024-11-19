@@ -67,10 +67,7 @@ router.get('/api/stripe/portal', authenticate, async (req, response) => {
     try {
         const session = await stripe.billingPortal.sessions.create({
             customer: customerId,
-            return_url: 'https://nutricoachme.com',
-            configuration: {
-                features: ['subscription_update'],
-            },
+            return_url: 'https://nutricoachme.com'
         });
 
         response.status(200).json({url: session.url});
