@@ -11,6 +11,7 @@ import emailController from "./controllers/emailcontroller.js";
 import healthcheckController from "./controllers/healthcheckcontroller.js";
 import openaiController from "./controllers/openaicontroller.js";
 import stripeController from "./controllers/stripecontroller.js";
+import "./tasks/scheduledTasks.js";
 
 // Initialize Stripe client
 let stripeKey = ''
