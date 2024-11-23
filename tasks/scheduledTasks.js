@@ -1,6 +1,7 @@
 
 import { scheduleTask } from '../service/cronService.js';
 import { checkinTask } from './checkinTask.js';
+import process from "process";
 
 const times = {
     every30Seconds: '*!/30 * * * * *',
@@ -15,4 +16,8 @@ const times = {
     console.log('Task executed at', new Date().toLocaleString());
 };*/
 
-scheduleTask(times.everySundayAt9am, await checkinTask);
+if (process.env.NODE_ENV === 'development') {
+    console.log('Scheduled task disabled in development');
+} else {    
+    scheduleTask(times.everySundayAt9am, await checkinTask);
+}

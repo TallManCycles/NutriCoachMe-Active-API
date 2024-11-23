@@ -268,4 +268,51 @@ router.post("/api/create-self-checkin", authenticate, async (req, res) => {
     }
 });
 
+router.post("/api/coach-check-in", authenticate, async (req, res) => {
+    try {
+        const { formdata, template } = req.body;
+
+        if (!openai) {
+            openai = new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY,
+            });
+        }
+
+        const message =
+            `Reply in detail as a nutritionist, and give some actionable tips for the upcoming week and sign off as Aaron Day. Create the response in html format for an email. ${template}`;
+
+        try {
+            const response = await openai.chat.completions.create({
+                messages: [{ role: "system", content: message }],
+                model: "gpt-4o-mini",
+                max_tokens: 1000,
+            });
+            if (
+                response &&
+                response.choices.length > 0 &&
+                response.choices[0].message &&
+                response.choices[0].message.content
+            ) {
+                try {
+                    const content = response.choices[0].message.content;
+
+                    logInfo(content);
+                    
+                    res.status(200).json({ message: content });
+                } catch (ex) {
+                    res.status(500).json({ error: true, message: ex.toString() });
+                }
+            } else {
+                res.status(400).json({ error: true, message: 'No response' });
+            }
+        } catch (error) {
+            logError(error);
+            res.status(500).json({ error: true, message: error.toString() });
+        }
+    } catch (error) {
+        logError(error);
+        res.status(500).json({ error: true, message: error.toString() });
+    }
+});
+
 export default router;
