@@ -1,15 +1,10 @@
 import express from 'express';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
 import process from 'process';
 import {logError, logInfo} from "../error/log.js";
+import supabase from '../data/supabase.js';
 
 const router = express.Router();
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVCE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize Stripe client
 let stripeKey = '';
