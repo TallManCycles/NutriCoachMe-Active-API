@@ -13,7 +13,7 @@ const htmlContent = fs.readFileSync(templatePath, 'utf8');
 
 async function checkinTask() {
     
-    console.log('being email task')
+    console.log('being email task at', new Date().toLocaleString());
     
     const {data: activeUsers} = await supabase
         .from('users')
@@ -21,6 +21,7 @@ async function checkinTask() {
         .gte('active_until', new Date().toISOString());
     
     if (!activeUsers || activeUsers.length === 0) {
+        console.log('No active users found');
         return;
     }
     
@@ -43,6 +44,12 @@ async function checkinTask() {
                 htmlContent,
                 'coach@fatforweightloss.com.au'
             )
+            
+            if (response[0].statusCode === 202) {
+                console.log('Email sent to', user.email);
+            } else {
+                console.error('Failed to send email to', user.email);
+            }
         } else {
             console.log('Checkin found for user', user.email);
         }
