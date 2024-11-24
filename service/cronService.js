@@ -6,5 +6,9 @@ import cron from 'node-cron';
  * @param {Function} task - The function to execute.
  */
 export const scheduleTask = (schedule, task) => {
-    cron.schedule(schedule, task);
+    if (process.env.NODE_ENV === 'development') {
+        console.log('Task scheduled to run at', schedule);
+    } else {
+        cron.schedule(schedule, task);
+    }
 };
