@@ -8,11 +8,11 @@ const times = {
     everyDayAtMidnight: '0 0 * * *',
     everyDayAt8AM: '0 8 * * *',
     every5Minutes: '*!/5 * * * *',
-    everySundayAt9am: '0 9 * * 0',
+    everySundayAt12pm: '0 12 * * 0',
 }
 
 /*const exampleTask = () => {
     console.log('Task executed at', new Date().toLocaleString());
 };*/
 
-scheduleTask(times.everySundayAt9am, await checkinTask);
+scheduleTask(times.everySundayAt12pm,checkinTask);
