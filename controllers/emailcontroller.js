@@ -61,4 +61,31 @@ router.post("/api/send-email-user", authenticate, async (req, res) => {
     }
 });
 
+router.post("/api/send-email-notification", authenticate, async (req, res) => {
+    try {
+        const { html, subject, to, from } = req.body;
+
+        const msg = {
+            to: to,
+            from: from,
+            subject: subject,
+            html: html,
+            replyTo: from,
+        };
+
+        console.log(msg);
+
+        const response = await sgMail.send(msg);
+
+        if (response[0].statusCode === 202) {
+            res.status(200).json({ message: "Success" });
+        } else {
+            res.status(500).json({ error: "Failed" });
+        }
+    } catch (error) {
+        logError(error);
+        res.status(500).json({ error: "An unknown error has occured." });
+    }
+});
+
 export default router;
