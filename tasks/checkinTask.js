@@ -39,10 +39,10 @@ async function checkinTask() {
         if (!checkins || checkins.length === 0) {
             const response = await sendEmail(
                 user.email,
-                'coach@fatforweightloss.com.au',
+                'support@nutricoachme.com',
                 'Weekly Checkin Reminder',
                 htmlContent,
-                'coach@fatforweightloss.com.au'
+                'aaron@nutricoachme.com'
             )
             
             if (response[0].statusCode === 202) {

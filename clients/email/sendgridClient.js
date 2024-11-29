@@ -4,6 +4,12 @@ import sgMail from "@sendgrid/mail";
 const apiKey = process.env.API_KEY;
 sgMail.setApiKey(apiKey);
 
+/**
+ * @typedef {Object} EmailResponse
+ * @property {boolean} ok - Indicates if the email was sent successfully.
+ * @property {number} status - The status code of the response.
+ * @property {string} message - The message of the response.
+ */
 
 /**
  * Sends an email using SendGrid.
@@ -12,7 +18,7 @@ sgMail.setApiKey(apiKey);
  * @param subject
  * @param html
  * @param replyTo
- * @returns {Promise<[Response<object>, {}]>}
+ * @returns {Promise<EmailResponse>}
  */
 export async function sendEmail (to, from, subject, html, replyTo) {
     const msg = {
@@ -23,5 +29,19 @@ export async function sendEmail (to, from, subject, html, replyTo) {
         replyTo: replyTo,
     };    
     
-    return await sgMail.send(msg);
+    const response = await sgMail.send(msg);
+
+    if (response[0].statusCode === 202) {
+        return { 
+            ok: true,
+            status: 202,
+            message: "Success" 
+        };
+    } else {
+        return { 
+            ok: false,
+            status: response[0].statusCode,
+            error: "Failed" 
+        };
+    }
 }
