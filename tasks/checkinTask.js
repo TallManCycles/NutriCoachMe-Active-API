@@ -13,7 +13,7 @@ const htmlContent = fs.readFileSync(templatePath, 'utf8');
 
 async function checkinTask() {
     
-    console.log('being email task at', new Date().toLocaleString());
+    console.log('begin email task at', new Date().toLocaleString());
     
     const {data: activeUsers} = await supabase
         .from('users')

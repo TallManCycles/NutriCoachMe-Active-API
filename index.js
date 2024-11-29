@@ -56,5 +56,8 @@ app.use('/', emailController);
 app.use('/', healthcheckController)
 app.use('/', openaiController);
 
+console.log('Server running on port', process.env.PORT || 3000);
+console.log('Server startup time', new Date().toLocaleString());
+
 const port = process.env.PORT || 3000;
 app.listen(port);
