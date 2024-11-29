@@ -1,7 +1,6 @@
 
 import { scheduleTask } from '../service/cronService.js';
 import { checkinTask } from './checkinTask.js';
-import process from "process";
 
 const times = {
     every30Seconds: '30 * * * * *',

@@ -239,7 +239,7 @@ router.post("/api/create-self-checkin", authenticate, async (req, res) => {
 
                     const msg = {
                         to: "fatforweightloss+client@gmail.com", // set to my email address for now to ensure the data is good: formdata.email,
-                        from: "coach@fatforweightloss.com.au",
+                        from: "support@nutricoachme.com",
                         subject: subject,
                         html: htmlResponse,
                         replyTo: formdata.email,
