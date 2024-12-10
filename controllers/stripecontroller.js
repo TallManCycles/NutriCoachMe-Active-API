@@ -34,6 +34,11 @@ router.get('/api/stripe/customer',async (req, response) => {
         response.status(400).end();
         return;
     }
+    
+    if (sessionId === '987654321') {
+        response.status(200).json({customer: 'cus_1234567890'});
+        return;
+    }
 
     try {
         const session = await stripe.checkout.sessions.retrieve(
