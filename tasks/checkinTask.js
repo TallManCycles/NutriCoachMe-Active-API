@@ -15,9 +15,11 @@ async function checkinTask() {
     
     console.log('begin email task at', new Date().toLocaleString());
     
+    // Only send to active and opt in email reminders
     const {data: activeUsers} = await supabase
         .from('users')
         .select()
+        .eq('checkin_reminders', true)
         .gte('active_until', new Date().toISOString());
     
     if (!activeUsers || activeUsers.length === 0) {
