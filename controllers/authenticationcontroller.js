@@ -11,7 +11,7 @@ const authenticate = async (req, res, next) => {
     }
 
     try {
-        req.user = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+        req.user = jwt.verify(token, process.env.NODE_ENV === 'development' ? process.env.SUPABASE_TEST_JWT_SECRET : process.env.SUPABASE_JWT_SECRET);
         next();
     } catch (error) {
         logError(error);

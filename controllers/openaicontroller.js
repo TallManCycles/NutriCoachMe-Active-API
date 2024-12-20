@@ -44,13 +44,13 @@ router.post("/api/food-assist", authenticate, async (req, res) => {
         const formattedTime = currentTime.toLocaleTimeString("en-US", options);
 
         const message =
-            `Reply and suggest some recipes to eat today that fill my remaining macronutrient goals for the day. I have ${calories} calories with ${protein}g of protein, ${carbs}g carbs and ${fats}g fat remaining. It's currently ${formattedTime}.`;
+            `Reply in HTML format and suggest some recipes to eat today that fill my remaining macronutrient goals for the day. I have ${calories} calories with ${protein}g of protein, ${carbs}g carbs and ${fats}g fat remaining. It's currently ${formattedTime}.`;
 
         try {
             const response = await openai.chat.completions.create({
                 messages: [{ role: "system", content: message }],
                 model: "gpt-4o-mini",
-                max_tokens: 500,
+                max_tokens: 1000,
             });
             if (
                 response &&
