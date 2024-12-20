@@ -4,9 +4,6 @@ import process from "process";
 let supabaseUrl = process.env.SUPABASE_URL;
 let supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key:', supabaseKey);
-
 // Initialize Supabase client
 if (process.env.NODE_ENV === 'development') {
     console.log('Using development Supabase credentials');
