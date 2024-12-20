@@ -9,7 +9,7 @@ const authenticate = async (req, res, next) => {
     let secret = process.env.SUPABASE_JWT_SECRET;
     
     if (process.env.NODE_ENV === 'development') {
-        process.env.SUPABASE_TEST_JWT_SECRET;
+        secret = process.env.SUPABASE_TEST_JWT_SECRET;
     }
 
     if (!token) {
