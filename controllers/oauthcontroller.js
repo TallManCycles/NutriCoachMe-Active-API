@@ -1,7 +1,6 @@
 import express from "express";
 import supabase from '../data/supabase.js';
-import { OAuth2Client } from 'google-auth-library';
-import opn from 'open';
+import {auth, OAuth2Client} from 'google-auth-library';
 
 const router = express.Router();
 
@@ -27,14 +26,9 @@ router.get("/api/start-google-oauth", async (req, res) => {
             access_type: 'offline',
             scope: SCOPES
         });
-
-        console.log('authurl', authUrl);
-
-        // Open browser for user authorization or send the link as a response
-        await opn(authUrl, { wait: false });
         
-        console.log('Authorization started. Check your browser.');
-        res.json({ message: 'Authorization started. Check your browser.' });    
+
+        res.status(200).json({ url: authUrl });    
     } catch (error) {
         console.error('Error starting Google OAuth:', error);
         res.status(500).send('Error starting Google OAuth');
