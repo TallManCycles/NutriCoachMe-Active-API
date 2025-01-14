@@ -22,17 +22,18 @@ router.get("/api/start-google-oauth", async (req, res) => {
 
     userId = req.query.userId;
     
-    console.log('User ID:', userId);
-    
     try {
         const authUrl = oauth2Client.generateAuthUrl({
             access_type: 'offline',
-            scope: SCOPES,
-            state: req.state,
+            scope: SCOPES
         });
+
+        console.log('authurl', authUrl);
 
         // Open browser for user authorization or send the link as a response
         await opn(authUrl, { wait: false });
+        
+        console.log('Authorization started. Check your browser.');
         res.json({ message: 'Authorization started. Check your browser.' });    
     } catch (error) {
         console.error('Error starting Google OAuth:', error);
@@ -67,7 +68,7 @@ router.get("/api/googleoauth", async (req, res) => {
             }
         }
 
-        res.status(200).redirect('https://test.aaroseday.com.au/pages/account/settings')
+        res.status(200).redirect(process.env.VITE_REDIRECT_URL);
     } catch (error) {
         console.error('Error during token exchange:', error);
         res.status(500).send('Authentication failed.');
