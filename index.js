@@ -14,6 +14,7 @@ import stripeController from "./controllers/stripecontroller.js";
 import "./tasks/scheduledTasks.js";
 import emailContactController from "./controllers/emailcontactcontroller.js";
 import weighttrackercontroller from "./controllers/weighttrackercontroller.js";
+import oauthcontroller from "./controllers/oauthcontroller.js";
 
 // Initialize Stripe client
 let stripeKey = ''
@@ -59,6 +60,7 @@ app.use('/', healthcheckController)
 app.use('/', openaiController);
 app.use('/', emailContactController)
 app.use('/', weighttrackercontroller)
+app.use('/', oauthcontroller);
 
 console.log('Server running on port', process.env.PORT || 3000);
 console.log('Server startup time', new Date().toLocaleString());
