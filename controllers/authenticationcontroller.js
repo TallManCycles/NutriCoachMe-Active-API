@@ -17,7 +17,7 @@ const authenticate = async (req, res, next) => {
     }
 
     try {
-        req.user = jwt.verify(token,secret );
+        req.user = jwt.verify(token,secret);
         next();
     } catch (error) {
         logError(error);
