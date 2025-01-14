@@ -122,8 +122,6 @@ router.get("/api/request-garmin-token", async (req, res) => {
             return res.status(500).send('Failed to save Garmin OAuth token');
         }
 
-        console.log('Garmin OAuth token:', data);
-
         garminTokenId = data[0].id;
 
         res.status(200).send({url: `${authorizeUrl}?oauth_token=${oauthToken}`});
@@ -164,6 +162,8 @@ router.get('/api/garmin-callback', async (req, res) => {
                     console.error('Error saving Garmin access token:', error);
                     return res.status(500).send('Failed to save Garmin access token');
                 }
+
+                userId = '';
 
                 res.status(200).redirect(process.env.VITE_REDIRECT_URL);
             }
