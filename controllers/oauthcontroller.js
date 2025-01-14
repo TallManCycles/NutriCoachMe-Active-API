@@ -23,16 +23,21 @@ router.get("/api/start-google-oauth", async (req, res) => {
     userId = req.query.userId;
     
     console.log('User ID:', userId);
+    
+    try {
+        const authUrl = oauth2Client.generateAuthUrl({
+            access_type: 'offline',
+            scope: SCOPES,
+            state: req.state,
+        });
 
-    const authUrl = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: SCOPES,
-        state: req.state,
-    });
-
-    // Open browser for user authorization or send the link as a response
-    await opn(authUrl, { wait: false });
-    res.json({ message: 'Authorization started. Check your browser.' });    
+        // Open browser for user authorization or send the link as a response
+        await opn(authUrl, { wait: false });
+        res.json({ message: 'Authorization started. Check your browser.' });    
+    } catch (error) {
+        console.error('Error starting Google OAuth:', error);
+        res.status(500).send('Error starting Google OAuth');
+    }        
 });
 
 router.get("/api/googleoauth", async (req, res) => {
