@@ -1,4 +1,4 @@
-import authenticate from "./authenticationcontroller.js";
+import { authenticate } from "./authenticationcontroller.js";
 import process from "process";
 import sgMail from "@sendgrid/mail";
 import express from "express";

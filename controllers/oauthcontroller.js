@@ -2,6 +2,7 @@ import express from "express";
 import supabase from '../data/supabase.js';
 import {auth, OAuth2Client} from 'google-auth-library';
 import {OAuth} from 'oauth';
+import { authenticate, authorisedUser } from "./authenticationcontroller.js";
 
 const router = express.Router();
 
@@ -96,10 +97,10 @@ router.get("/api/googleoauth", async (req, res) => {
 });
 
 
-router.get("/api/request-garmin-token", async (req, res) => {
+router.get("/api/request-garmin-token", authenticate, authorisedUser,  async (req, res) => {
     try {
-
-        userId = req.query.userId;
+        
+    userId = req.authorisedUser.id;
         
     oauth.getOAuthRequestToken(async (err, oauthToken, oauthTokenSecret) => {
         if (err) {

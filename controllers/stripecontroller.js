@@ -1,7 +1,7 @@
 import express from 'express';
 import Stripe from 'stripe';
 import process from 'process';
-import authenticate from "./authenticationcontroller.js";
+import { authenticate } from "./authenticationcontroller.js";
 import {logError, logInfo} from "../error/log.js";
 
 const router = express.Router();

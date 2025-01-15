@@ -1,4 +1,4 @@
-import authenticate from "./authenticationcontroller.js";
+import { authenticate } from "./authenticationcontroller.js";
 import express from "express";
 import {logError} from "../error/log.js";
 import { sendEmail } from "../clients/email/mailgunClient.js";

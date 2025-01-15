@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import process from "process";
-import {logError} from "../error/log.js";
+import supabase from '../data/supabase.js';
+import { logError } from "../error/log.js";
 
 const authenticate = async (req, res, next) => {
 
@@ -25,4 +26,25 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-export default authenticate;
+const authorisedUser = async (req, res, next) => {
+    try {
+        const { data: user, error } = await supabase
+            .from('users')
+            .select()
+            .eq('uuid', req.user.sub)
+            .single();
+
+        if (error) {
+            logError(error);
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        req.authorisedUser = user;
+        next();
+    } catch (error) {
+        logError(error);
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+};
+
+export { authenticate, authorisedUser };
