@@ -31,7 +31,7 @@ const router = express.Router();
 
 router.post("/api/food-assist", authenticate, async (req, res) => {
     try {
-        const { calories, protein, carbs, fats } = req.body;
+        const { calories, protein, carbs, fats, now } = req.body;
 
         if (!openai) {
             openai = new OpenAI({
@@ -39,7 +39,7 @@ router.post("/api/food-assist", authenticate, async (req, res) => {
             });
         }
 
-        const currentTime = new Date();
+        const currentTime = new Date(now);
         const options = { hour: "2-digit", minute: "2-digit", hour12: true };
         const formattedTime = currentTime.toLocaleTimeString("en-US", options);
 
