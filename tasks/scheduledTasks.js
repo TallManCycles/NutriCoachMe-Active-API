@@ -1,6 +1,7 @@
 
 import { scheduleTask } from '../service/cronService.js';
 import { checkinTask } from './checkinTask.js';
+import {getBiometricsFromGoogle} from '../data/google.js';
 
 const times = {
     every30Seconds: '30 * * * * *',
@@ -9,6 +10,8 @@ const times = {
     everyDayAt8AM: '* 0 8 * * *',
     every5Minutes: '0 5 * * * *',
     everySundayAt5pm: '0 0 17 * * 7',
+    everyHour: '0 0 * * * *',
 }
 
 scheduleTask(times.everySundayAt5pm, checkinTask);
+scheduleTask(times.everyHour, getBiometricsFromGoogle);

@@ -35,7 +35,6 @@ async function saveUserDataInDatabase(compositionData) {
         const dbDate = localDateTime.toISOString().split('T')[0];
         
         // get the uuid from the users table to insert into the usermetrics table
-        
         const { data: userUuid, error: userUuidError } = await supabase
             .from('users')
             .select('uuid')
@@ -45,8 +44,7 @@ async function saveUserDataInDatabase(compositionData) {
             console.error('Error getting user uuid:', userUuidError);
             return;
         }
-
-        // check if there is already a weight entry for this date, and if so upsert it with onconflict = id
+        
         const { data: existingData, error: existingError } = await supabase
             .from('usermetrics')
             .select()
@@ -58,8 +56,7 @@ async function saveUserDataInDatabase(compositionData) {
             return;
         }
 
-        if (existingData.length > 0) {
-            
+        if (existingData.length > 0) {            
             if (existingData[0].external_update) {
                 console.log('Skipping external update');
                 return;
