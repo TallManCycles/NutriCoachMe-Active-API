@@ -28,6 +28,18 @@ async function getBiometricsFromGoogle() {
 
         const client = await getGoogleOAuthClient(token.user_id, googleToken);
 
+
+        // get the uuid from the users table to insert into the usermetrics table
+        const { data: userUuid, error: userUuidError } = await supabase
+            .from('users')
+            .select('uuid')
+            .eq('id', token.user_id);
+
+        if (userUuidError || !userUuid || userUuid.length === 0) {
+            console.error('Error getting user uuid:', userUuidError);
+            return;
+        }
+
         const url = 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate';
         
         const headers = {
@@ -84,12 +96,20 @@ async function getBiometricsFromGoogle() {
                         }
 
                         if (existingRow.length > 0) {
+                            
+                            if (existingRow[0].external_update) {
+                                continue;
+                            }
+                            
                             const {error: updateError} = await supabase
                                 .from("usermetrics")
                                 .update({
                                     weight: parseFloat(data.weight),
                                     notes: existingRow[0].notes + ', ' + data.notes,
-                                    complete: true
+                                    complete: true,
+                                    external_update: true,
+                                    json_data: data,
+                                    uuid: userUuid[0].uuid
                                 })
                                 .eq('id', existingRow[0].id);
 
@@ -104,7 +124,10 @@ async function getBiometricsFromGoogle() {
                                     date: formatDate(data.date),
                                     weight: parseFloat(data.weight),
                                     notes: data.notes,
-                                    complete: true
+                                    complete: true,
+                                    external_update: true,
+                                    json_data: data,
+                                    uuid: userUuid[0].uuid
                                 });
 
                             if (insertError) {
@@ -117,8 +140,6 @@ async function getBiometricsFromGoogle() {
 
         } catch (error) {
             console.error('Error fetching fitness data:', error);
-        } finally {
-            this.isLoading = false;
         }
     }
 }
