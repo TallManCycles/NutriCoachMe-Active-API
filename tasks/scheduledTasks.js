@@ -10,7 +10,8 @@ const times = {
     everyDayAt8AM: '* 0 8 * * *',
     every5Minutes: '0 5 * * * *',
     everySundayAt5pm: '0 0 17 * * 7',
+    everyHour: '0 0 * * * *',
 }
 
 scheduleTask(times.everySundayAt5pm, checkinTask);
-//scheduleTask(times.every30Seconds, getBiometricsFromGoogle);
+scheduleTask(times.everyHour, getBiometricsFromGoogle);

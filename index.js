@@ -68,7 +68,5 @@ app.use('/', webhookcontroller);
 console.log('Server running on port', process.env.PORT || 3000);
 console.log('Server startup time', new Date().toLocaleString());
 
-await getBiometricsFromGoogle();
-
 const port = process.env.PORT || 3000;
 app.listen(port);
