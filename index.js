@@ -16,7 +16,6 @@ import emailContactController from "./controllers/emailcontactcontroller.js";
 import weighttrackercontroller from "./controllers/weighttrackercontroller.js";
 import oauthcontroller from "./controllers/oauthcontroller.js";
 import webhookcontroller from "./controllers/webhookcontroller.js";
-import {getBiometricsFromGoogle} from "./data/google.js";
 
 // Initialize Stripe client
 let stripeKey = ''
