@@ -15,103 +15,122 @@ async function getBiometricsFromGoogle() {
     }
 
     for (const token of googleTokens) {
-        const googleToken = {
-            access_token: token.access_token,
-            refresh_token: token.refresh_token,
-            expiry_date: token.expires_in,
-            token_type: token.token_type,
-            scope: token.scope
-        };
-
-        const client = await getGoogleOAuthClient(token.user_id, googleToken);
-
-        const { data: userUuid, error: userUuidError } = await supabase
-            .from('users')
-            .select('uuid')
-            .eq('id', token.user_id);
-
-        if (userUuidError || !userUuid || userUuid.length === 0) {
-            console.error('Error getting user uuid:', userUuidError);
-            return;
-        }
-
-        const url = 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate';
-        const headers = {
-            'Authorization': `Bearer ${client.credentials.access_token}`,
-            'Content-Type': 'application/json'
-        };
-        const requestBody = {
-            "startTimeMillis": Date.now() - 604800000,
-            "endTimeMillis": Date.now(),
-            "aggregateBy": [{ "dataTypeName": "com.google.weight" }],
-            "bucketByTime": { "durationMillis": 86400000 }
-        };
-
         try {
-            const response = await axios.post(url, requestBody, { headers });
-            const fitnessData = response.data;
+            console.log('Processing token for user:', token.user_id);
+            
+            const googleToken = {
+                access_token: token.access_token,
+                refresh_token: token.refresh_token,
+                expiry_date: token.expiry_date,
+                token_type: token.token_type,
+                scope: token.scope
+            };
 
-            const items = fitnessData.bucket.flatMap(bucket =>
-                bucket.dataset[0].point.map(point => ({
-                    date: new Date(point.startTimeNanos / 1000000),
-                    weight: point.value[0].fpVal?.toFixed(2),
-                    notes: 'weight added from google fit'
-                }))
-            );
+            console.log('Token expiry date:', new Date(googleToken.expiry_date));
+            
+            const client = await getGoogleOAuthClient(token.user_id, googleToken);
 
-            for (const data of items) {
-                const { data: existingRow, error: fetchError } = await supabase
-                    .from("usermetrics")
-                    .select()
-                    .eq("userid", token.user_id)
-                    .eq("date", formatDate(data.date));
+            const { data: userUuid, error: userUuidError } = await supabase
+                .from('users')
+                .select('uuid')
+                .eq('id', token.user_id);
 
-                if (fetchError) {
-                    console.error('Error fetching existing row:', fetchError);
+            if (userUuidError || !userUuid || userUuid.length === 0) {
+                console.error('Error getting user uuid:', userUuidError);
+                continue;
+            }
+
+            const url = 'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate';
+            const headers = {
+                'Authorization': `Bearer ${client.credentials.access_token}`,
+                'Content-Type': 'application/json'
+            };
+            const requestBody = {
+                "startTimeMillis": Date.now() - 604800000,
+                "endTimeMillis": Date.now(),
+                "aggregateBy": [{ "dataTypeName": "com.google.weight" }],
+                "bucketByTime": { "durationMillis": 86400000 }
+            };
+
+            try {
+                console.log('Fetching fitness data for user:', token.user_id);
+                const response = await axios.post(url, requestBody, { headers });
+                const fitnessData = response.data;
+
+                if (!fitnessData.bucket) {
+                    console.log('No fitness data found for user:', token.user_id);
                     continue;
                 }
 
-                if (existingRow.length > 0) {
-                    if (existingRow[0].external_update) continue;
+                const items = fitnessData.bucket.flatMap(bucket =>
+                    bucket.dataset[0].point.map(point => ({
+                        date: new Date(point.startTimeNanos / 1000000),
+                        weight: point.value[0].fpVal?.toFixed(2),
+                        notes: 'weight added from google fit'
+                    }))
+                );
 
-                    const { error: updateError } = await supabase
+                console.log(`Found ${items.length} weight entries for user:`, token.user_id);
+
+                for (const data of items) {
+                    const { data: existingRow, error: fetchError } = await supabase
                         .from("usermetrics")
-                        .update({
-                            weight: parseFloat(data.weight),
-                            notes: `${existingRow[0].notes}, ${data.notes}`,
-                            complete: true,
-                            external_update: true,
-                            json_data: data,
-                            uuid: userUuid[0].uuid
-                        })
-                        .eq('id', existingRow[0].id);
+                        .select()
+                        .eq("userid", token.user_id)
+                        .eq("date", formatDate(data.date));
 
-                    if (updateError) {
-                        console.error('Error updating row:', updateError);
+                    if (fetchError) {
+                        console.error('Error fetching existing row:', fetchError);
+                        continue;
                     }
-                } else {
-                    const { error: insertError } = await supabase
-                        .from("usermetrics")
-                        .insert({
-                            userid: token.user_id,
-                            date: formatDate(data.date),
-                            weight: parseFloat(data.weight),
-                            notes: data.notes,
-                            complete: true,
-                            external_update: true,
-                            json_data: data,
-                            uuid: userUuid[0].uuid
-                        });
 
-                    if (insertError) {
-                        console.error('Error inserting new row:', insertError);
+                    if (existingRow.length > 0) {
+                        if (existingRow[0].external_update) continue;
+
+                        const { error: updateError } = await supabase
+                            .from("usermetrics")
+                            .update({
+                                weight: parseFloat(data.weight),
+                                notes: `${existingRow[0].notes}, ${data.notes}`,
+                                complete: true,
+                                external_update: true,
+                                json_data: data,
+                                uuid: userUuid[0].uuid
+                            })
+                            .eq('id', existingRow[0].id);
+
+                        if (updateError) {
+                            console.error('Error updating row:', updateError);
+                        }
+                    } else {
+                        const { error: insertError } = await supabase
+                            .from("usermetrics")
+                            .insert({
+                                userid: token.user_id,
+                                date: formatDate(data.date),
+                                weight: parseFloat(data.weight),
+                                notes: data.notes,
+                                complete: true,
+                                external_update: true,
+                                json_data: data,
+                                uuid: userUuid[0].uuid
+                            });
+
+                        if (insertError) {
+                            console.error('Error inserting new row:', insertError);
+                        }
                     }
+                }
+            } catch (error) {
+                console.error('Error fetching fitness data for user:', token.user_id, error.response?.status, error.response?.statusText);
+                if (error.response?.data?.error) {
+                    console.error('Google API error details:', error.response.data.error);
                 }
             }
         } catch (error) {
-            console.error('Error fetching fitness data:', error);
+            console.error('Error processing token for user:', token.user_id, error);
         } finally {
-            console.log('Google Fit data fetched at', new Date());
+            console.log('Finished processing Google Fit data for user:', token.user_id, 'at', new Date().toISOString());
         }
     }
 }
