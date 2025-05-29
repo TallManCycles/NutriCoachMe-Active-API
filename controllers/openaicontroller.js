@@ -215,7 +215,7 @@ router.post("/api/create-self-checkin", authenticate, async (req, res) => {
         }
 
         const message =
-            `Reply in detail as a nutritionist, and give some actionable tips for the upcoming week and sign off as Aaron Day. Create the response in html format for an email. ${template}`;
+            `Reply to this email in detail as a nutritionist, and give three actionable tips for the upcoming week written in detail. Create the response in html format for an email. ${template}`;
 
         try {
             const response = await openai.chat.completions.create({
