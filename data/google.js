@@ -141,6 +141,42 @@ async function getGoogleOAuthClient(userId, token) {
 
     oAuth2Client.setCredentials(token);
 
+    // Check if token is expired or will expire in the next 5 minutes
+    const expiryDate = token.expiry_date;
+    const isExpired = expiryDate ? Date.now() >= (expiryDate - 300000) : true;
+
+    if (isExpired && token.refresh_token) {
+        try {
+            console.log('Token expired, attempting refresh for user:', userId);
+            const { credentials } = await oAuth2Client.refreshAccessToken();
+            const updateData = {
+                access_token: credentials.access_token,
+                expiry_date: credentials.expiry_date,
+            };
+            
+            if (credentials.refresh_token) {
+                updateData.refresh_token = credentials.refresh_token;
+            }
+
+            const { error: updateError } = await supabase
+                .from('access_tokens')
+                .update(updateData)
+                .eq('user_id', userId)
+                .eq('type', 'google');
+
+            if (updateError) {
+                console.error('Error updating tokens in database:', updateError);
+            } else {
+                console.log('Successfully refreshed token for user:', userId);
+            }
+
+            oAuth2Client.setCredentials(credentials);
+        } catch (error) {
+            console.error('Error refreshing token:', error);
+            throw error;
+        }
+    }
+
     oAuth2Client.on('tokens', async (tokens) => {
         const updateData = {
             expiry_date: tokens.expiry_date,
@@ -149,10 +185,15 @@ async function getGoogleOAuthClient(userId, token) {
         if (tokens.refresh_token) {
             updateData.refresh_token = tokens.refresh_token;
         }
-        await supabase
+        const { error: updateError } = await supabase
             .from('access_tokens')
             .update(updateData)
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('type', 'google');
+
+        if (updateError) {
+            console.error('Error updating tokens in database:', updateError);
+        }
     });
 
     return oAuth2Client;
