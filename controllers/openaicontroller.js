@@ -29,6 +29,8 @@ sgMail.setApiKey(apiKey);
 
 const router = express.Router();
 
+const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
+
 router.post("/api/food-assist", authenticate, async (req, res) => {
     try {
         const { calories, protein, carbs, fats, now } = req.body;
@@ -214,49 +216,86 @@ router.post("/api/create-self-checkin", authenticate, async (req, res) => {
             });
         }
 
-        const message =
-            `Reply to this email in detail as a nutritionist, and give three actionable tips for the upcoming week written in detail. Create the response in html format for an email. ${template}`;
-
         try {
-            const response = await openai.chat.completions.create({
-                messages: [{ role: "system", content: message }],
-                model: "gpt-4o-mini",
-                max_tokens: 1000,
+            // Create a thread
+            const thread = await openai.beta.threads.create();
+
+            // Add a message to the thread
+            await openai.beta.threads.messages.create(thread.id, {
+                role: "user",
+                content: `As a professional nutritionist, please provide a detailed response to this client check-in: ${template}
+
+            Your response must follow this exact structure:
+
+            1. Personal Greeting and Acknowledgment
+            - Warmly acknowledge the client's specific situation by their first name and progress mentioned in their check-in
+
+            2. Detailed Analysis
+            - Provide a thoughtful analysis of their current situation
+            - Highlight both positive aspects and areas that need attention
+
+            3. Three Specific, Actionable Weekly Goals
+            Each goal must include:
+            - What: Clear, measurable action to take
+            - When: Specific timing or frequency
+            - How: Step-by-step implementation instructions
+            - Why: Brief explanation of the benefits
+
+            4. Accountability Section
+            - Specific metrics or ways to track progress
+            - Suggestion for documenting their journey
+
+            5. Encouraging Closing
+            - Motivational closing statement
+            - Invitation to reach out with questions
+
+            Format the entire response in clean, well-structured HTML with appropriate heading tags, paragraphs, and bullet points for easy reading.`
             });
-            if (
-                response &&
-                response.choices.length > 0 &&
-                response.choices[0].message &&
-                response.choices[0].message.content
-            ) {
-                try {
-                    const content = response.choices[0].message.content;
 
-                    logInfo(content);
+            // Run the assistant
+            const run = await openai.beta.threads.runs.create(thread.id, {
+                assistant_id: ASSISTANT_ID
+            });
 
-                    const htmlResponse = "<html><body><p>" + content +
-                        "</p></body></html>";
+            // Wait for the completion
+            let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+            
+            while (runStatus.status !== 'completed') {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+                
+                if (runStatus.status === 'failed') {
+                    throw new Error('Assistant run failed');
+                }
+            }
 
-                    const msg = {
-                        to: "fatforweightloss+client@gmail.com", // set to my email address for now to ensure the data is good: formdata.email,
-                        from: "support@nutricoachme.com",
-                        subject: subject,
-                        html: htmlResponse,
-                        replyTo: formdata.email,
-                    };
+            // Get the messages
+            const messages = await openai.beta.threads.messages.list(thread.id);
+            const lastMessage = messages.data[0];
 
-                    const emailResponse = await sgMail.send(msg);
+            if (lastMessage && lastMessage.content && lastMessage.content[0].text) {
+                const content = lastMessage.content[0].text.value;
+                logInfo(content);
 
-                    if (emailResponse[0].statusCode === 202) {
-                        res.status(200).json({ message: "Success" });
-                    } else {
-                        res.status(500).json({ error: "Failed" });
-                    }
-                } catch (ex) {
-                    res.status(500).json({ error: true, message: ex.toString() });
+                const htmlResponse = "<html><body><p>" + content + "</p></body></html>";
+
+                const msg = {
+                    to: "fatforweightloss+client@gmail.com", // set to my email address for now to ensure the data is good: formdata.email,
+                    from: "support@nutricoachme.com",
+                    subject: subject,
+                    html: htmlResponse,
+                    replyTo: formdata.email,
+                };
+
+                const emailResponse = await sgMail.send(msg);
+
+                if (emailResponse[0].statusCode === 202) {
+                    res.status(200).json({ message: "Success" });
+                } else {
+                    res.status(500).json({ error: "Failed" });
                 }
             } else {
-                res.status(400).json({ error: true, message: 'No response' });
+                res.status(400).json({ error: true, message: 'No response from assistant' });
             }
         } catch (error) {
             logError(error);
