@@ -74,7 +74,7 @@ router.get("/api/googleoauth", async (req, res) => {
             const { error } = await supabase.from("access_tokens").insert({
                 access_token: tokens.access_token,
                 refresh_token: tokens.refresh_token,
-                expires_in: tokens.expiry_date,
+                expiry_date: tokens.expiry_date,
                 token_type: tokens.token_type,
                 scope: tokens.scope,
                 user_id: userId,
