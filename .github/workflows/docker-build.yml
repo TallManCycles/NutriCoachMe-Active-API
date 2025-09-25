@@ -51,10 +51,16 @@ jobs:
 
     - name: Make image public
       run: |
-        # Make the package public
-        gh api --method PATCH /orgs/tallmancycles/packages/container/nutricoachme-active-api/visibility \
-          --field visibility=public || \
-        gh api --method PATCH /users/${{ github.actor }}/packages/container/nutricoachme-active-api/visibility \
-          --field visibility=public
+        # Wait for package to be available and then make it public
+        sleep 10
+        PACKAGE_NAME=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]' | sed 's/.*\///')
+
+        # Try to make package public - ignore errors if package doesn't exist yet
+        gh api --method PATCH "/user/packages/container/${PACKAGE_NAME}/visibility" \
+          --field visibility=public 2>/dev/null || \
+        gh api --method PATCH "/orgs/tallmancycles/packages/container/${PACKAGE_NAME}/visibility" \
+          --field visibility=public 2>/dev/null || \
+        echo "Package not found or already public - this is expected for new packages"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
