@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  nutricoachme-api:
+    image: ghcr.io/tallmancycles/nutricoachme-api:latest
+    container_name: nutricoachme-api
+    restart: unless-stopped
+    ports:
+      - "${PORT-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - ACCESS_TOKEN_URL=${ACCESS_TOKEN_URL}
+      - API_KEY=${API_KEY}
+      - AUTHORIZE_URL=${AUTHORIZE_URL}
+      - GARMIN_CONSUMER_KEY=${GARMIN_CONSUMER_KEY}
+      - GARMIN_CONSUMER_SECRET=${GARMIN_CONSUMER_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - MAILGUN_DOMAIN=${MAILGUN_DOMAIN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_ASSISTANT_ID=${OPENAI_ASSISTANT_ID}
+      - REQUEST_TOKEN_URL=${REQUEST_TOKEN_URL}
+      - STRIPE_LIVE_SECRET_KEY=${STRIPE_LIVE_SECRET_KEY}
+      - STRIPE_LIVE_WEBHOOK_SECRET=${STRIPE_LIVE_WEBHOOK_SECRET}
+      - STRIPE_TEST_SECRET_KEY=${STRIPE_TEST_SECRET_KEY}
+      - STRIPE_TEST_WEBHOOK_SECRET=${STRIPE_TEST_WEBHOOK_SECRET}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - nutricoachme-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health-check"]
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      interval: 30s
+
+volumes:
+  uploads_data:
+
+networks:
+  nutricoachme-network:
+    driver: bridge
