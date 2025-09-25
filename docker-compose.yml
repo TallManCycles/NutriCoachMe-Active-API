@@ -27,6 +27,7 @@ services:
       - STRIPE_TEST_WEBHOOK_SECRET=${STRIPE_TEST_WEBHOOK_SECRET}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
     volumes:
       - uploads_data:/app/uploads
     networks:
