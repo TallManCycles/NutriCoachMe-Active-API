@@ -1,8 +1,7 @@
-version: '3.8'
 
 services:
   nutricoachme-api:
-    image: ghcr.io/tallmancycles/nutricoachme-api:latest
+    image: ghcr.io/tallmancycles/nutricoachme-active-api:latest
     container_name: nutricoachme-api
     restart: unless-stopped
     ports:
