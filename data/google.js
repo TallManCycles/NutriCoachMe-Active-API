@@ -158,16 +158,40 @@ async function getGoogleOAuthClient(userId, token) {
         process.env.GOOGLE_REDIRECT_URL
     );
 
+    if (!token.access_token) {
+        throw new Error('No access token available');
+    }
+
     oAuth2Client.setCredentials(token);
 
     // Check if token is expired or will expire in the next 5 minutes
     const expiryDate = token.expiry_date;
     const isExpired = expiryDate ? Date.now() >= (expiryDate - 300000) : true;
 
-    if (isExpired && token.refresh_token) {
+    if (isExpired) {
+        if (!token.refresh_token) {
+            // If no refresh token, we need to re-authenticate
+            console.error('No refresh token available for user:', userId);
+            
+            // Delete the invalid token
+            await supabase
+                .from('access_tokens')
+                .delete()
+                .eq('user_id', userId)
+                .eq('type', 'google');
+                
+            throw new Error('No refresh token available. User needs to re-authenticate.');
+        }
+
         try {
             console.log('Token expired, attempting refresh for user:', userId);
             const { credentials } = await oAuth2Client.refreshAccessToken();
+            
+            // Ensure we got new credentials
+            if (!credentials.access_token) {
+                throw new Error('Failed to get new access token');
+            }
+
             const updateData = {
                 access_token: credentials.access_token,
                 expiry_date: credentials.expiry_date,
@@ -185,25 +209,37 @@ async function getGoogleOAuthClient(userId, token) {
 
             if (updateError) {
                 console.error('Error updating tokens in database:', updateError);
-            } else {
-                console.log('Successfully refreshed token for user:', userId);
+                throw updateError;
             }
 
+            console.log('Successfully refreshed token for user:', userId);
             oAuth2Client.setCredentials(credentials);
         } catch (error) {
             console.error('Error refreshing token:', error);
-            throw error;
+            
+            // If refresh failed, delete the token and require re-authentication
+            await supabase
+                .from('access_tokens')
+                .delete()
+                .eq('user_id', userId)
+                .eq('type', 'google');
+                
+            throw new Error('Token refresh failed. User needs to re-authenticate.');
         }
     }
 
     oAuth2Client.on('tokens', async (tokens) => {
+        if (!tokens.access_token) return;
+        
         const updateData = {
-            expiry_date: tokens.expiry_date,
-            access_token: tokens.access_token
+            access_token: tokens.access_token,
+            expiry_date: tokens.expiry_date
         };
+        
         if (tokens.refresh_token) {
             updateData.refresh_token = tokens.refresh_token;
         }
+        
         const { error: updateError } = await supabase
             .from('access_tokens')
             .update(updateData)
