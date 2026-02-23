@@ -2,7 +2,7 @@ import { scheduleTask } from '../service/cronService.js';
 import { checkinTask } from './checkinTask.js';
 import {getBiometricsFromGoogle} from '../data/google.js';
 
-const times = {
+export const times = {
     every30Seconds: '30 * * * * *',
     every5Seconds: '5 * * * * *',
     everyDayAtMidnight: '0 0 0 * * *',

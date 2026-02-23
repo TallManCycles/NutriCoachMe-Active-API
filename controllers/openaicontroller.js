@@ -105,8 +105,8 @@ router.post("/api/food-assist", authenticate, async (req, res) => {
 
         const response = await openai.chat.completions.create({
             messages: [{ role: "system", content: message }],
-            model: "gpt-4o-mini",
-            max_tokens: 1000,
+            model: "gpt-5",
+            max_tokens: 4000,
         });
 
         if (response?.choices?.[0]?.message?.content) {

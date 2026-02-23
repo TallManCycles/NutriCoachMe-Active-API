@@ -15,12 +15,9 @@ export const scheduleTask = (schedule, task) => {
     }
     
     console.log('Task scheduled to run at', schedule, 'UTC', new Date().toISOString());
-    if (process.env.NODE_ENV === 'development') {
-        console.log('Task will run NOT in development mode');
-    } else {
-        cron.schedule(schedule, task, {
-            scheduled: true,
-            timezone: 'Australia/Brisbane',
-        });
-    }
+    
+    cron.schedule(schedule, task, {
+        scheduled: true,
+        timezone: 'Australia/Brisbane',
+    });
 };
