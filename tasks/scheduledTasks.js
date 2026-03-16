@@ -26,7 +26,7 @@ scheduleTask(times.everySundayAt5pm, async () => {
     }
 });
 
-console.log('Scheduling macro reminder task for every day at 5pm');
+logInfo('Scheduling macro reminder task for every day at 5pm');
 scheduleTask(times.everyDayAt5pm, async () => {
     try {
         logInfo('Starting macro reminder task at: ' + new Date().toISOString());

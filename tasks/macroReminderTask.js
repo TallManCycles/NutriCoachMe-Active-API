@@ -18,7 +18,9 @@ async function macroReminderTask() {
 
     try {
         // The cron is in 'Australia/Brisbane', so we should get the date for that timezone.
-        const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Australia/Brisbane' })).toISOString().split('T')[0];
+        const now = new Date();
+        const brisbaneTime = new Date(now.getTime() + (10 * 60 * 60 * 1000)); // UTC+10
+        const today = brisbaneTime.toISOString().split('T')[0];
 
         // 1. Get all active users with email notifications enabled.
         const { data: activeUsers, error: usersError } = await supabase
