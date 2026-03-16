@@ -2,6 +2,7 @@ import { scheduleTask } from '../service/cronService.js';
 import { checkinTask } from './checkinTask.js';
 import { macroReminderTask } from './macroReminderTask.js';
 import {getBiometricsFromGoogle} from '../data/google.js';
+import { logInfo, logError } from '../error/log.js';
 
 export const times = {
     every30Seconds: '30 * * * * *',
@@ -28,11 +29,11 @@ scheduleTask(times.everySundayAt5pm, async () => {
 console.log('Scheduling macro reminder task for every day at 5pm');
 scheduleTask(times.everyDayAt5pm, async () => {
     try {
-        console.log('Starting macro reminder task at:', new Date().toISOString());
+        logInfo('Starting macro reminder task at: ' + new Date().toISOString());
         await macroReminderTask();
-        console.log('Completed macro reminder task at:', new Date().toISOString());
+        logInfo('Completed macro reminder task at: ' + new Date().toISOString());
     } catch (error) {
-        console.error('Error in macro reminder task:', error);
+        logError(new Error(`Error in macro reminder task: ${error.stack}`));
     }
 });
 
