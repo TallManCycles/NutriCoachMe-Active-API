@@ -82,6 +82,7 @@ async function macroReminderTask() {
         }
     } catch (error) {
         logError(new Error(`Unhandled error in macroReminderTask: ${error.stack}`));
+    }
 }
 
 export { macroReminderTask };
