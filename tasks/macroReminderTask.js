@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import process from 'process';
 import supabase from '../data/supabase.js';
-import { sendEmail } from '../data/sendgrid.js';
+import { sendEmail } from '../service/emailService.js';
 import { logInfo, logError } from '../error/log.js';
 
 // Get the directory name of the current module
@@ -26,7 +26,7 @@ async function macroReminderTask() {
         const { data: activeUsers, error: usersError } = await supabase
             .from('users')
             .select('uuid, email')
-            .eq('email_notifications', true)
+            .eq('checkin_reminders', true)
             .gte('active_until', new Date().toISOString());
 
         if (usersError) {
@@ -59,27 +59,23 @@ async function macroReminderTask() {
         for (const user of usersToRemind) {
             logInfo(`No macros logged for ${user.email} on ${today}. Sending reminder.`);
 
-            if (process.env.NODE_ENV === 'production') {
-                logInfo(`Sending real reminder email to ${user.email}...`);
-                try {
-                    const response = await sendEmail(
-                        user.email,
-                        'support@nutricoachme.com',
-                        'Daily Macro Logging Reminder',
-                        htmlContent,
-                        'aaron@nutricoachme.com'
-                    );
+            logInfo(`Sending reminder email to ${user.email}...`);
+            try {
+                const response = await sendEmail(
+                    user.email,
+                    'support@nutricoachme.com',
+                    'Daily Macro Logging Reminder',
+                    htmlContent,
+                    'aaron@nutricoachme.com'
+                );
 
-                    if (response && response[0] && response[0].statusCode === 202) {
-                        logInfo(`Email sent successfully to ${user.email}`);
-                    } else {
-                        logError(new Error(`Failed to send email to ${user.email}. Response: ${JSON.stringify(response)}`));
-                    }
-                } catch (emailError) {
-                    logError(new Error(`Failed to send email to ${user.email}: ${emailError.stack}`));
+                if (response && response.ok) {
+                    logInfo(`Email sent successfully to ${user.email}`);
+                } else {
+                    logError(new Error(`Failed to send email to ${user.email}. Response: ${JSON.stringify(response)}`));
                 }
-            } else {
-                logInfo(`[DEV MODE] Skipping real email to ${user.email}. (Macro reminder would have been sent)`);
+            } catch (emailError) {
+                logError(new Error(`Failed to send email to ${user.email}: ${emailError.stack}`));
             }
         }
     } catch (error) {

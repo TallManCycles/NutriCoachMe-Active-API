@@ -105,8 +105,8 @@ router.post("/api/food-assist", authenticate, async (req, res) => {
 
         const response = await openai.chat.completions.create({
             messages: [{ role: "system", content: message }],
-            model: "gpt-5",
-            max_tokens: 4000,
+            model: "gpt-4o",
+            max_completion_tokens: 4000,
         });
 
         if (response?.choices?.[0]?.message?.content) {
@@ -129,7 +129,7 @@ router.post("/api/food-input", authenticate, async (req, res) => {
         const response = await openai.chat.completions.create({
             messages: [{ role: "system", content: message }],
             model: "gpt-4o-mini",
-            max_tokens: 500,
+            max_completion_tokens: 500,
         });
 
         if (response?.choices?.[0]?.message?.content) {
@@ -170,7 +170,7 @@ router.post("/api/food-nutrition", authenticate, upload.single('file'), async (r
                     ] 
                 }
             ],
-            max_tokens: 500
+            max_completion_tokens: 500
         });
 
         if (response?.choices?.[0]?.message?.content) {
@@ -199,7 +199,7 @@ router.post("/api/create-self-checkin", authenticate, async (req, res) => {
 
         const run = await openai.beta.threads.runs.create(thread.id, {
             assistant_id: ASSISTANT_ID,
-            model: "gpt-5"
+            model: "gpt-4o"
         });
 
         let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
@@ -262,7 +262,7 @@ router.post("/api/coach-check-in", authenticate, async (req, res) => {
                     content: `Client Check-in Details:\n${template}` 
                 }
             ],
-            model: "gpt-5",
+            model: "gpt-4o",
             max_completion_tokens: 10000
         };
 

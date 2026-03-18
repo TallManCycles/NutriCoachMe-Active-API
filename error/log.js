@@ -2,13 +2,14 @@ import fs from 'fs';
 
 function logError(error) {
     try {
+        console.error(error);
+
         if (process.env.NODE_ENV === 'development') {
-            console.error(error);
             return;
         }
 
         const timestamp = new Date().toISOString();
-        const errorMessage = `${timestamp} - ${error.message}\n`;
+        const errorMessage = `${timestamp} - ${error.stack || error.message || error}\n`;
 
         fs.appendFile('error_log.txt', errorMessage, (err) => {
             if (err) {
@@ -22,8 +23,9 @@ function logError(error) {
 
 function logInfo(customInfo) {
     try {
+        console.log(customInfo);
+
         if (process.env.NODE_ENV === 'development') {
-            console.log(customInfo);
             return;
         }
 

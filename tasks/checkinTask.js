@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import process from 'process';
 import supabase from '../data/supabase.js';
-import { sendEmail } from '../data/sendgrid.js';
+import { sendEmail } from '../service/emailService.js';
 
 // Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -60,7 +60,7 @@ async function checkinTask() {
                     'aaron@nutricoachme.com'
                 );
                 
-                if (response && response[0] && response[0].statusCode === 202) {
+                if (response && response.ok) {
                     console.log('Email sent successfully to', user.email);
                 } else {
                     console.error('Failed to send email to', user.email, 'Response:', JSON.stringify(response));
