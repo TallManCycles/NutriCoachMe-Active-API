@@ -1,7 +1,7 @@
 import { authenticate } from "./authenticationcontroller.js";
 import express from "express";
 import { logError } from "../error/log.js";
-import { sendEmail } from "../clients/email/mailgunClient.js";
+import { sendEmail } from "../service/emailService.js";
 import rateLimit from "express-rate-limit";
 
 const router = express.Router();
