@@ -40,10 +40,9 @@ The Gemini code reviewer will:
 
 ### 5. Customization
 
-Edit `.github/workflows/gemini-code-review.yml` to:
+Edit `.github/workflows/gemini-developer.yml` to:
 - Change file types to review
 - Modify review criteria
-- Adjust the Gemini model (currently using `gemini-1.5-flash`)
 
 ### 6. Rate Limits
 
