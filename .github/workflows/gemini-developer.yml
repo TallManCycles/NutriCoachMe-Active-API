@@ -44,28 +44,28 @@ jobs:
         run: |
           cat << 'EOF' > gemini-implement.cjs
           const { GoogleGenerativeAI } = require("@google/generative-ai");
-          const fs = require('fs');
-          const path = require('path');
+          const fs = require("fs");
+          const path = require("path");
 
           const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
           const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
           async function run() {
             try {
-              const files = fs.readdirSync('.', { recursive: true })
+              const files = fs.readdirSync(".", { recursive: true })
                 .filter(f => {
                   try {
-                    return !f.includes('node_modules') && 
-                           !f.includes('.git') && 
-                           !f.endsWith('.cjs') &&
+                    return !f.includes("node_modules") && 
+                           !f.includes(".git") && 
+                           !f.endsWith(".cjs") &&
                            fs.statSync(f).isFile();
                   } catch { return false; }
                 });
           
               let codebaseContext = "";
               for (const f of files) {
-                const content = fs.readFileSync(f, 'utf8');
-                codebaseContext += '\n--- FILE: ' + f + ' ---\n' + content + '\n';
+                const content = fs.readFileSync(f, "utf8");
+                codebaseContext += "\n--- FILE: " + f + " ---\n" + content + "\n";
               }
 
               const prompt = "SYSTEM: Expert Node.js developer. " +
@@ -76,4 +76,43 @@ jobs:
                 "Title: " + process.env.ISSUE_TITLE + "\n" +
                 "Body: " + process.env.ISSUE_BODY + "\n" +
                 "Comment: " + process.env.COMMENT_BODY + "\n\n" +
-                "FORMAT
+                "FORMAT:\n" +
+                "{ \"files\": [ { \"path\": \"string\", \"content\": \"string\" } ] }";
+
+              const result = await model.generateContent(prompt);
+              const response = await result.response;
+              const text = response.text();
+          
+              const jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) throw new Error("No JSON found in AI response");
+          
+              const data = JSON.parse(jsonMatch[0]);
+              for (const file of data.files) {
+                const dir = path.dirname(file.path);
+                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(file.path, file.content);
+                console.log("Updated: " + file.path);
+              }
+            } catch (error) {
+              console.error("Generation Error:", error);
+              process.exit(1);
+            }
+          }
+          run();
+          EOF
+          node gemini-implement.cjs
+
+      - name: Commit and Push changes
+        run: |
+          rm gemini-implement.cjs
+          
+          git config --global user.name "gemini-bot"
+          git config --global user.email "gemini-bot@users.noreply.github.com"
+          git add .
+          
+          if git diff --staged --quiet; then
+            echo "No changes detected."
+          else
+            git commit -m "Gemini: Auto-generated code for ${{ github.event.issue.title || github.event.pull_request.title }}"
+            git push
+          fi
