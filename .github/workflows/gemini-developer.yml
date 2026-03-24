@@ -1,0 +1,61 @@
+- name: Run Gemini Code Generator
+    id: gemini
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    run: |
+      cat << 'EOF' > gemini-implement.js
+      import { GoogleGenAI } from "@google/genai";
+      import fs from 'fs';
+      import path from 'path';
+      
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const model = ai.models.get("gemini-3-flash-preview");
+      
+      async function run() {
+        try {
+          const files = fs.readdirSync('.', { recursive: true })
+            .filter(f => !f.includes('node_modules') && !f.includes('.git') && !f.includes('package-lock.json') && fs.statSync(f).isFile());
+      
+          let codebaseContext = "";
+          for (const f of files) {
+            const content = fs.readFileSync(f, 'utf8');
+            codebaseContext += `\n--- FILE: ${f} ---\n${content}\n`;
+          }
+      
+          const prompt = `
+            SYSTEM: Expert Node.js developer. Implement feature. Return ONLY JSON.
+      
+            CONTEXT:
+            ${codebaseContext}
+      
+            REQUEST:
+            Title: ${process.env.ISSUE_TITLE}
+            Body: ${process.env.ISSUE_BODY}
+            Comment: ${process.env.COMMENT_BODY}
+      
+            FORMAT:
+            { "files": [ { "path": "string", "content": "string" } ] }
+          `;
+      
+          const result = await model.generateContent(prompt);
+          const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error("No JSON found");
+      
+          const data = JSON.parse(jsonMatch[0]);
+          for (const file of data.files) {
+            const dir = path.dirname(file.path);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(file.path, file.content);
+            console.log(file.path);
+          }
+        } catch (error) {
+          console.error(error);
+          process.exit(1);
+        }
+      }
+      run();
+      EOF
+      node gemini-implement.js
