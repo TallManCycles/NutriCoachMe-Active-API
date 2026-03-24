@@ -41,9 +41,9 @@ async function macroReminderTask() {
 
         // 2. Get all user UUIDs that have logged macros today from the active users list.
         const { data: loggedUsers, error: loggedError } = await supabase
-            .from('nutritiondetails')
+            .from('usermetrics')
             .select('uuid')
-            .eq('datestart', today)
+            .eq('date', today)
             .in('uuid', activeUsers.map(u => u.uuid));
 
         if (loggedError) {
