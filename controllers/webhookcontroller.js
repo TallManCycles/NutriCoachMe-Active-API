@@ -1,22 +1,7 @@
 import express from "express";
 import supabase from '../data/supabase.js';
 
-const router = express.Router();
-
-router.post("/webhook/garmin-body-composition", async (req, res) => {
-    try {
-        const bodyCompositionData = req.body.bodyComps;
-
-        saveUserDataInDatabase(bodyCompositionData);
-        
-        res.status(200).send('Data processed successfully');
-    } catch (error) {
-        console.error('Error processing Garmin data:', error);
-        res.status(500).send('Internal Server Error');
-    }     
-});
-
-async function saveUserDataInDatabase(compositionData) {
+export async function saveUserDataInDatabase(compositionData) {
     const promises = compositionData.map(async (comp) => {
         const { data: user, error } = await supabase
             .from('access_tokens')
@@ -99,5 +84,20 @@ async function saveUserDataInDatabase(compositionData) {
     await Promise.all(promises);
 }
 
+export const handleGarminWebhook = async (req, res) => {
+    try {
+        const bodyCompositionData = req.body.bodyComps;
+
+        await saveUserDataInDatabase(bodyCompositionData);
+        
+        res.status(200).send('Data processed successfully');
+    } catch (error) {
+        console.error('Error processing Garmin data:', error);
+        res.status(500).send('Internal Server Error');
+    }     
+};
+
+const router = express.Router();
+router.post("/webhook/garmin-body-composition", handleGarminWebhook);
 
 export default router;

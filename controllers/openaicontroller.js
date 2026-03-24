@@ -15,11 +15,12 @@ const router = express.Router();
 const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
 
 // Initialize Clients
-const openai = new OpenAI({
+export const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
 sgMail.setApiKey(process.env.API_KEY);
+export { sgMail };
 
 // Configure Multer
 const storage = multer.diskStorage({
@@ -32,7 +33,7 @@ const storage = multer.diskStorage({
         cb(null, `${baseName}-${Date.now()}${ext}`);
     }
 });
-const upload = multer({ storage: storage });
+export const upload = multer({ storage: storage });
 
 // --- Constants ---
 
@@ -91,9 +92,9 @@ Each goal must include:
 Format the entire response in clean, well-structured HTML with appropriate heading tags, paragraphs, and bullet points for easy reading. 
 This will be sent as an email.`;
 
-// --- Routes ---
+// --- Handlers ---
 
-router.post("/api/food-assist", authenticate, async (req, res) => {
+export const handleFoodAssist = async (req, res) => {
     try {
         const { calories, protein, carbs, fats, now } = req.body;
 
@@ -118,9 +119,9 @@ router.post("/api/food-assist", authenticate, async (req, res) => {
         logError(error);
         res.status(500).json({ error: "An unknown error has occurred." });
     }
-});
+};
 
-router.post("/api/food-input", authenticate, async (req, res) => {
+export const handleFoodInput = async (req, res) => {
     try {
         const { prompt } = req.body;
         const sampleObjectString = JSON.stringify(SAMPLE_NUTRITION_OBJECT);
@@ -141,9 +142,9 @@ router.post("/api/food-input", authenticate, async (req, res) => {
         logError(error);
         res.status(500).json({ error: true });
     }
-});
+};
 
-router.post("/api/food-nutrition", authenticate, upload.single('file'), async (req, res) => {
+export const handleFoodNutrition = async (req, res) => {
     try {
         const file = req.file;
         const sampleObjectString = JSON.stringify(SAMPLE_NUTRITION_OBJECT);
@@ -182,9 +183,9 @@ router.post("/api/food-nutrition", authenticate, upload.single('file'), async (r
         logError(error);
         res.status(500).json({ error: "An unknown error has occurred." });
     }
-});
+};
 
-router.post("/api/create-self-checkin", authenticate, async (req, res) => {
+export const handleCreateSelfCheckin = async (req, res) => {
     try {
         const { formdata, template, subject } = req.body;
 
@@ -244,9 +245,9 @@ router.post("/api/create-self-checkin", authenticate, async (req, res) => {
         logError(error);
         res.status(500).json({ error: true, message: error.toString() });
     }
-});
+};
 
-router.post("/api/coach-check-in", authenticate, async (req, res) => {
+export const handleCoachCheckIn = async (req, res) => {
     try {
         const { template } = req.body;
 
@@ -254,7 +255,6 @@ router.post("/api/coach-check-in", authenticate, async (req, res) => {
             messages: [
                 {
                     role: "system", 
-                    //content: "You are Aaron Day, a professional nutritionist. Provide a detailed, encouraging response to a client's weekly check-in. Include actionable tips for the upcoming week and sign off as Aaron Day. Format the response in clean HTML for an email. Be concise and do not repeat yourself." 
                     content: CHECKIN_PROMPT_TEMPLATE
                 },
                 {
@@ -283,6 +283,14 @@ router.post("/api/coach-check-in", authenticate, async (req, res) => {
         logError("OpenAI Error: " + error.toString());
         res.status(500).json({ error: true, message: error.toString() });
     }
-});
+};
+
+// --- Routes ---
+
+router.post("/api/food-assist", authenticate, handleFoodAssist);
+router.post("/api/food-input", authenticate, handleFoodInput);
+router.post("/api/food-nutrition", authenticate, upload.single('file'), handleFoodNutrition);
+router.post("/api/create-self-checkin", authenticate, handleCreateSelfCheckin);
+router.post("/api/coach-check-in", authenticate, handleCoachCheckIn);
 
 export default router;

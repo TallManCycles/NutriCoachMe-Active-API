@@ -17,9 +17,9 @@ if (process.env.NODE_ENV === 'development') {
     stripeWebhookSecret = process.env.STRIPE_LIVE_WEBHOOK_SECRET;
 }
 
-const stripe = new Stripe(stripeKey);
+export const stripe = new Stripe(stripeKey);
 
-router.post('/', express.raw({ type: 'application/json' }), async (request, response) => {
+export const handleStripeWebhook = async (request, response) => {
     const sig = request.headers['stripe-signature'];
     const endpointSecret = stripeWebhookSecret;
 
@@ -61,11 +61,13 @@ router.post('/', express.raw({ type: 'application/json' }), async (request, resp
     }
 
     response.send();
-});
+};
+
+router.post('/', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 router.post('/stripe/customer')
 
-async function handleWebhookRequest(id, eventType, data) {
+export async function handleWebhookRequest(id, eventType, data) {
     logInfo(`Received event ${eventType} with id ${id}`);
 
     try {

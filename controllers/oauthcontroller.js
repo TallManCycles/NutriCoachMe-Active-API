@@ -6,7 +6,7 @@ import { authenticate, authorisedUser } from "./authenticationcontroller.js";
 
 const router = express.Router();
 
-const oauth2Client = new OAuth2Client(
+export const oauth2Client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URL
@@ -23,7 +23,7 @@ const authorizeUrl = process.env.AUTHORIZE_URL;
 const consumerKey = process.env.GARMIN_CONSUMER_KEY;
 const consumerSecret = process.env.GARMIN_CONSUMER_SECRET;
 
-const oauth = new OAuth(
+export const oauth = new OAuth(
     requestTokenUrl,
     accessTokenUrl,
     consumerKey,
@@ -43,8 +43,7 @@ let userId = '';
 
 let garminTokenId = '';
 
-router.get("/api/start-google-oauth", async (req, res) => {
-
+export const handleStartGoogleOAuth = async (req, res) => {
     userId = req.query.userId;
     
     try {
@@ -59,9 +58,9 @@ router.get("/api/start-google-oauth", async (req, res) => {
         console.error('Error starting Google OAuth:', error);
         res.status(500).send('Error starting Google OAuth');
     }        
-});
+};
 
-router.get("/api/googleoauth", async (req, res) => {
+export const handleGoogleOAuth = async (req, res) => {
     try {
         const code = req.query.code;
         const { tokens} = await oauth2Client.getToken(code);
@@ -94,19 +93,18 @@ router.get("/api/googleoauth", async (req, res) => {
         console.error('Error during token exchange:', error);
         res.status(500).send('Authentication failed.');
     }
-});
+};
 
-
-router.get("/api/request-garmin-token", authenticate, authorisedUser,  async (req, res) => {
+export const handleRequestGarminToken = async (req, res) => {
     try {
+        userId = req.authorisedUser.id;
         
-    userId = req.authorisedUser.id;
-        
-    oauth.getOAuthRequestToken(async (err, oauthToken, oauthTokenSecret) => {
-        if (err) {
-            console.error('Error getting OAuth request token:', err);
-            return res.status(500).send('Failed to obtain request token');
-        }
+        const { oauthToken, oauthTokenSecret } = await new Promise((resolve, reject) => {
+            oauth.getOAuthRequestToken((err, oauthToken, oauthTokenSecret) => {
+                if (err) reject(err);
+                else resolve({ oauthToken, oauthTokenSecret });
+            });
+        });
 
         const {data, error} = await supabase
             .from("oauth_tokens")
@@ -126,52 +124,61 @@ router.get("/api/request-garmin-token", authenticate, authorisedUser,  async (re
         garminTokenId = data[0].id;
 
         res.status(200).send({url: `${authorizeUrl}?oauth_token=${oauthToken}`});
-    });
     } catch (error) {
         console.error('Error requesting Garmin token:', error);
+        res.status(500).send('Failed to obtain request token');
     }
-});
+};
 
-router.get('/api/garmin-callback', async (req, res) => {
-
+export const handleGarminCallback = async (req, res) => {
     try {
-
         const {oauth_token, oauth_verifier} = req.query;
 
         const {data, error} = await supabase.from("oauth_tokens").select().eq('id', garminTokenId);
 
+        if (error || !data || data.length === 0) {
+            console.error('Error retrieving request token secret:', error);
+            return res.status(500).send('Failed to retrieve request token secret');
+        }
+
         // Retrieve stored request token secret
         const oauthTokenSecret = data[0].oauth_token_secret;
 
-        oauth.getOAuthAccessToken(
-            oauth_token,
-            oauthTokenSecret,
-            oauth_verifier,
-            async (err, accessToken, accessTokenSecret) => {
-                if (err) {
-                    console.error('Error getting OAuth access token:', err);
-                    return res.status(500).send('Failed to obtain access token');
+        const { accessToken, accessTokenSecret } = await new Promise((resolve, reject) => {
+            oauth.getOAuthAccessToken(
+                oauth_token,
+                oauthTokenSecret,
+                oauth_verifier,
+                (err, accessToken, accessTokenSecret) => {
+                    if (err) reject(err);
+                    else resolve({ accessToken, accessTokenSecret });
                 }
+            );
+        });
 
-                const {error} = await supabase.from("access_tokens").insert({
-                    access_token: accessToken,
-                    user_id: userId,
-                    type: 'garmin'
-                });
-                
-                if (error) {
-                    console.error('Error saving Garmin access token:', error);
-                    return res.status(500).send('Failed to save Garmin access token');
-                }
+        const {error: saveError} = await supabase.from("access_tokens").insert({
+            access_token: accessToken,
+            user_id: userId,
+            type: 'garmin'
+        });
+        
+        if (saveError) {
+            console.error('Error saving Garmin access token:', saveError);
+            return res.status(500).send('Failed to save Garmin access token');
+        }
 
-                userId = '';
+        userId = '';
 
-                res.status(200).redirect(process.env.VITE_REDIRECT_URL);
-            }
-        );
+        res.status(200).redirect(process.env.VITE_REDIRECT_URL);
     } catch (error) {
         console.error('Error during Garmin callback:', error);
+        res.status(500).send('Authentication failed during callback');
     }
-});
+};
+
+router.get("/api/start-google-oauth", handleStartGoogleOAuth);
+router.get("/api/googleoauth", handleGoogleOAuth);
+router.get("/api/request-garmin-token", authenticate, authorisedUser, handleRequestGarminToken);
+router.get('/api/garmin-callback', handleGarminCallback);
 
 export default router;

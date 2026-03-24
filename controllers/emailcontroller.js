@@ -5,7 +5,7 @@ import { sendEmail } from "../service/emailService.js";
 
 const router = express.Router();
 
-router.post("/api/send-email", authenticate, async (req, res) => {
+export const handleSendEmail = async (req, res) => {
     try {
         const { formdata, template, subject } = req.body;
 
@@ -26,9 +26,9 @@ router.post("/api/send-email", authenticate, async (req, res) => {
         logError(error);
         res.status(500).json({ error: "An unknown error has occurred." });
     }
-});
+};
 
-router.post("/api/send-email-user", authenticate, async (req, res) => {
+export const handleSendEmailUser = async (req, res) => {
     try {
         const { html, subject, to, from, replyTo } = req.body;
 
@@ -49,9 +49,9 @@ router.post("/api/send-email-user", authenticate, async (req, res) => {
         logError(error);
         res.status(500).json({ error: "An unknown error has occurred." });
     }
-});
+};
 
-router.post("/api/send-email-notification", authenticate, async (req, res) => {
+export const handleSendEmailNotification = async (req, res) => {
     try {
         const { html, subject, to, from } = req.body;
 
@@ -72,6 +72,10 @@ router.post("/api/send-email-notification", authenticate, async (req, res) => {
         logError(error);
         res.status(500).json({ error: "An unknown error has occurred." });
     }
-});
+};
+
+router.post("/api/send-email", authenticate, handleSendEmail);
+router.post("/api/send-email-user", authenticate, handleSendEmailUser);
+router.post("/api/send-email-notification", authenticate, handleSendEmailNotification);
 
 export default router;

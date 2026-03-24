@@ -16,7 +16,7 @@ if (process.env.NODE_ENV === 'development') {
     stripeKey = process.env.STRIPE_LIVE_SECRET_KEY;
 }
 
-const stripe = new Stripe(stripeKey);
+export const stripe = new Stripe(stripeKey);
 
 /**
  * @param {Object} request
@@ -26,7 +26,7 @@ const stripe = new Stripe(stripeKey);
  * @throws {Error} error
  * @example
  */
-router.get('/api/stripe/customer',async (req, response) => {
+export const handleGetStripeCustomer = async (req, response) => {
 
     const sessionId = req.query.session;
 
@@ -59,9 +59,9 @@ router.get('/api/stripe/customer',async (req, response) => {
         logError(error);
         response.status(404).end();
     }
-});
+};
 
-router.get('/api/stripe/portal', authenticate, async (req, response) => {
+export const handleGetStripePortal = async (req, response) => {
     const customerId = req.query.customer;
 
     if (!customerId) {
@@ -80,6 +80,9 @@ router.get('/api/stripe/portal', authenticate, async (req, response) => {
         logError(error);
         response.status(404).end();
     }
-});
+};
+
+router.get('/api/stripe/customer', handleGetStripeCustomer);
+router.get('/api/stripe/portal', authenticate, handleGetStripePortal);
 
 export default router;

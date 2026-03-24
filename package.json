@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "test": "playwright test"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run",
+    "test:integration": "playwright test"
   },
   "_moduleAliases": {
     "@": "."
@@ -37,5 +39,8 @@
     "openai": "^4.24.1",
     "playwright": "^1.49.1",
     "stripe": "^17.3.1"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.1"
   }
 }

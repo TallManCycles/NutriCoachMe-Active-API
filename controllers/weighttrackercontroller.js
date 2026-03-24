@@ -2,9 +2,7 @@ import express from 'express';
 import supabase from '../data/supabase.js';
 import { logError } from '../error/log.js';
 
-const router = express.Router();
-
-router.post('/api/weight-tracker', async (req, res) => {
+export const handleWeightTracker = async (req, res) => {
     try {
         const { ping } = req.body;
 
@@ -30,7 +28,7 @@ router.post('/api/weight-tracker', async (req, res) => {
         const newValue = value + 4;
 
         // Upsert the updated values
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('interest')
             .upsert({
                 id: 1,
@@ -47,6 +45,9 @@ router.post('/api/weight-tracker', async (req, res) => {
         logError(error);
         res.status(500).json({ error: 'An error occurred' });
     }
-});
+};
+
+const router = express.Router();
+router.post('/api/weight-tracker', handleWeightTracker);
 
 export default router;

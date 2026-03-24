@@ -12,7 +12,7 @@ const contactFormLimiter = rateLimit({
     message: "Too many requests"
 });
 
-router.post("/api/contact-form", contactFormLimiter, async (req, res) => {
+export const handleContactForm = async (req, res) => {
     try {
         const { name, email, message } = req.body;
 
@@ -35,6 +35,8 @@ router.post("/api/contact-form", contactFormLimiter, async (req, res) => {
         logError(error);
         res.status(500).json({ error: "An unknown error has occured." });
     }
-});
+};
+
+router.post("/api/contact-form", contactFormLimiter, handleContactForm);
 
 export default router;
