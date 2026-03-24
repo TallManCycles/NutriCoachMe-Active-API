@@ -14,6 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@playwright/test": "^1.49.1",
     "@sendgrid/mail": "^7.7.0",
     "@supabase/supabase-js": "^2.45.6",
