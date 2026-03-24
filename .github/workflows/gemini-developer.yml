@@ -10,7 +10,6 @@ on:
 
 jobs:
   generate-code:
-    # Runs on new Issues/PRs OR if a comment contains the trigger command
     if: |
       github.event.action == 'opened' || 
       contains(github.event.comment.body, '/gemini-run')
@@ -33,19 +32,18 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        # This fixes the module resolution error you identified
         run: npm install @google/generative-ai
 
       - name: Run Gemini Code Generator
         id: gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Fallback logic to grab context from either an Issue or a PR
           ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
           ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
           COMMENT_BODY: ${{ github.event.comment.body || '' }}
         run: |
-          cat << 'EOF' > gemini-implement.js
+          # Renamed to .cjs to bypass "type": "module" in package.json
+          cat << 'EOF' > gemini-implement.cjs
           const { GoogleGenerativeAI } = require("@google/generative-ai");
           const fs = require('fs');
           const path = require('path');
@@ -55,7 +53,6 @@ jobs:
 
           async function run() {
             try {
-              // Recursively find files, excluding git and node_modules
               const files = fs.readdirSync('.', { recursive: true })
                 .filter(f => {
                   try {
@@ -64,7 +61,7 @@ jobs:
                            fs.statSync(f).isFile();
                   } catch { return false; }
                 });
-          
+              
               let codebaseContext = "";
               for (const f of files) {
                 const content = fs.readFileSync(f, 'utf8');
@@ -72,9 +69,9 @@ jobs:
               }
 
               const prompt = `
-                SYSTEM: Expert Node.js developer. Implement the requested feature or fix. 
-                Return ONLY a valid JSON object. No prose. No markdown blocks.
-          
+                SYSTEM: Expert Node.js developer. Implement the requested feature. 
+                Return ONLY a valid JSON object.
+                
                 CONTEXT:
                 ${codebaseContext}
 
@@ -90,10 +87,10 @@ jobs:
               const result = await model.generateContent(prompt);
               const response = await result.response;
               const text = response.text();
-          
+              
               const jsonMatch = text.match(/\{[\s\S]*\}/);
-              if (!jsonMatch) throw new Error("No JSON found in AI response");
-          
+              if (!jsonMatch) throw new Error("No JSON found");
+              
               const data = JSON.parse(jsonMatch[0]);
               for (const file of data.files) {
                 const dir = path.dirname(file.path);
@@ -102,13 +99,13 @@ jobs:
                 console.log("Updated: " + file.path);
               }
             } catch (error) {
-              console.error("Error during generation:", error);
+              console.error(error);
               process.exit(1);
             }
           }
           run();
           EOF
-          node gemini-implement.js
+          node gemini-implement.cjs
 
       - name: Commit and Push changes
         run: |
