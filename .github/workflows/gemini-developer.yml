@@ -1,20 +1,36 @@
 name: Gemini Code Generation
+
 on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
   issue_comment:
     types: [created]
 
 jobs:
   generate-code:
-    if: contains(github.event.comment.body, '/gemini-run')
+    # Logic: Run if it's a new issue/PR, or if a comment contains the trigger command
+    if: |
+      github.event.action == 'opened' || 
+      contains(github.event.comment.body, '/gemini-run')
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-node-version: '20'
+          node-version: '20'
 
       - name: Install dependencies
         run: npm install @google/generative-ai
@@ -23,9 +39,10 @@ jobs:
         id: gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
+          # Logic to capture title and body from either Issue or PR
+          ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
+          ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
+          COMMENT_BODY: ${{ github.event.comment.body || '' }}
         run: |
           cat << 'EOF' > gemini-implement.js
           const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -33,13 +50,20 @@ jobs:
           const path = require('path');
 
           const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          // Using 1.5-flash for speed and cost-efficiency
           const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
           async function run() {
             try {
-              // Recursively find files, excluding hidden/node_modules
+              // Get all files excluding git and node_modules
               const files = fs.readdirSync('.', { recursive: true })
-                .filter(f => !f.includes('node_modules') && !f.includes('.git') && fs.statSync(f).isFile());
+                .filter(f => {
+                  try {
+                    return !f.includes('node_modules') && 
+                           !f.includes('.git') && 
+                           fs.statSync(f).isFile();
+                  } catch { return false; }
+                });
           
               let codebaseContext = "";
               for (const f of files) {
@@ -47,33 +71,50 @@ jobs:
                 codebaseContext += `\n--- FILE: ${f} ---\n${content}\n`;
               }
 
-              const prompt = `SYSTEM: Expert Node.js developer. Implement feature. Return ONLY JSON.
-                CONTEXT: ${codebaseContext}
+              const prompt = `
+                SYSTEM: Expert Node.js developer. Implement the requested feature or fix. 
+                Return ONLY a valid JSON object. No prose. No markdown blocks.
+          
+                CONTEXT:
+                ${codebaseContext}
+
                 REQUEST:
                 Title: ${process.env.ISSUE_TITLE}
                 Body: ${process.env.ISSUE_BODY}
                 Comment: ${process.env.COMMENT_BODY}
-                FORMAT: { "files": [ { "path": "string", "content": "string" } ] }`;
+
+                FORMAT:
+                { "files": [ { "path": "string", "content": "string" } ] }
+              `;
 
               const result = await model.generateContent(prompt);
               const response = await result.response;
               const text = response.text();
-              const jsonMatch = text.match(/\{[\s\S]*\}/);
           
-              if (!jsonMatch) throw new Error("No JSON found");
+              // Extract JSON in case the model included backticks or extra text
+              const jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (!jsonMatch) throw new Error("No JSON found in AI response");
           
               const data = JSON.parse(jsonMatch[0]);
               for (const file of data.files) {
                 const dir = path.dirname(file.path);
                 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
                 fs.writeFileSync(file.path, file.content);
-                console.log("Updated:", file.path);
+                console.log("Updated: " + file.path);
               }
             } catch (error) {
-              console.error(error);
+              console.error("Error during generation:", error);
               process.exit(1);
             }
           }
           run();
           EOF
           node gemini-implement.js
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "gemini-bot"
+          git config --global user.email "gemini-bot@users.noreply.github.com"
+          git add .
+          git commit -m "Gemini: Auto-generated code for ${{ github.event.issue.title || github.event.pull_request.title }}"
+          git push
