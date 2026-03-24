@@ -1,68 +1,79 @@
-name: Run Gemini Code Generator
-id: gemini
-env:
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
-  ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
-  COMMENT_BODY: ${{ github.event.comment.body || '' }}
-run: |
-  cat << 'EOF' > gemini-implement.cjs
-  const { GoogleGenerativeAI } = require("@google/generative-ai");
-  const fs = require('fs');
-  const path = require('path');
-  
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-  
-  async function run() {
-    try {
-      const files = fs.readdirSync('.', { recursive: true })
-        .filter(f => {
-          try {
-            return !f.includes('node_modules') && 
-                   !f.includes('.git') && 
-                   !f.endsWith('.cjs') &&
-                   fs.statSync(f).isFile();
-          } catch { return false; }
-        });
-  
-      let codebaseContext = "";
-      for (const f of files) {
-        const content = fs.readFileSync(f, 'utf8');
-        codebaseContext += `\n--- FILE: ${f} ---\n${content}\n`;
-      }
-  
-      // Using standard string concatenation to avoid backtick issues in shell heredocs
-      const prompt = "SYSTEM: Expert Node.js developer. " +
-        "Use Gemini 3's advanced reasoning to implement the requested feature. " +
-        "Return ONLY a valid JSON object. Do not include markdown formatting.\n\n" +
-        "CONTEXT:\n" + codebaseContext + "\n\n" +
-        "REQUEST:\n" +
-        "Title: " + process.env.ISSUE_TITLE + "\n" +
-        "Body: " + process.env.ISSUE_BODY + "\n" +
-        "Comment: " + process.env.COMMENT_BODY + "\n\n" +
-        "FORMAT:\n" +
-        '{ "files": [ { "path": "string", "content": "string" } ] }';
-  
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-  
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in AI response");
-  
-      const data = JSON.parse(jsonMatch[0]);
-      for (const file of data.files) {
-        const dir = path.dirname(file.path);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(file.path, file.content);
-        console.log("Updated: " + file.path);
-      }
-    } catch (error) {
-      console.error("Generation Error:", error);
-      process.exit(1);
-    }
-  }
-  run();
-  EOF
-  node gemini-implement.cjs
+name: Gemini Code Generation
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  generate-code:
+    if: |
+      github.event.action == 'opened' || 
+      contains(github.event.comment.body, '/gemini-run')
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @google/generative-ai
+
+      - name: Run Gemini Code Generator
+        id: gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
+          ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
+          COMMENT_BODY: ${{ github.event.comment.body || '' }}
+        run: |
+          cat << 'EOF' > gemini-implement.cjs
+          const { GoogleGenerativeAI } = require("@google/generative-ai");
+          const fs = require('fs');
+          const path = require('path');
+
+          const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+          async function run() {
+            try {
+              const files = fs.readdirSync('.', { recursive: true })
+                .filter(f => {
+                  try {
+                    return !f.includes('node_modules') && 
+                           !f.includes('.git') && 
+                           !f.endsWith('.cjs') &&
+                           fs.statSync(f).isFile();
+                  } catch { return false; }
+                });
+          
+              let codebaseContext = "";
+              for (const f of files) {
+                const content = fs.readFileSync(f, 'utf8');
+                codebaseContext += '\n--- FILE: ' + f + ' ---\n' + content + '\n';
+              }
+
+              const prompt = "SYSTEM: Expert Node.js developer. " +
+                "Use Gemini 3's advanced reasoning to implement the requested feature. " +
+                "Return ONLY a valid JSON object. Do not include markdown formatting.\n\n" +
+                "CONTEXT:\n" + codebaseContext + "\n\n" +
+                "REQUEST:\n" +
+                "Title: " + process.env.ISSUE_TITLE + "\n" +
+                "Body: " + process.env.ISSUE_BODY + "\n" +
+                "Comment: " + process.env.COMMENT_BODY + "\n\n" +
+                "FORMAT
