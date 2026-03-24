@@ -10,7 +10,7 @@ on:
 
 jobs:
   generate-code:
-    # Logic: Run if it's a new issue/PR, or if a comment contains the trigger command
+    # Runs on new Issues/PRs OR if a comment contains the trigger command
     if: |
       github.event.action == 'opened' || 
       contains(github.event.comment.body, '/gemini-run')
@@ -33,13 +33,14 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
+        # This fixes the module resolution error you identified
         run: npm install @google/generative-ai
 
       - name: Run Gemini Code Generator
         id: gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Logic to capture title and body from either Issue or PR
+          # Fallback logic to grab context from either an Issue or a PR
           ISSUE_TITLE: ${{ github.event.issue.title || github.event.pull_request.title }}
           ISSUE_BODY: ${{ github.event.issue.body || github.event.pull_request.body }}
           COMMENT_BODY: ${{ github.event.comment.body || '' }}
@@ -50,12 +51,11 @@ jobs:
           const path = require('path');
 
           const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-          // Using 1.5-flash for speed and cost-efficiency
           const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
           async function run() {
             try {
-              // Get all files excluding git and node_modules
+              // Recursively find files, excluding git and node_modules
               const files = fs.readdirSync('.', { recursive: true })
                 .filter(f => {
                   try {
@@ -91,7 +91,6 @@ jobs:
               const response = await result.response;
               const text = response.text();
           
-              // Extract JSON in case the model included backticks or extra text
               const jsonMatch = text.match(/\{[\s\S]*\}/);
               if (!jsonMatch) throw new Error("No JSON found in AI response");
           
